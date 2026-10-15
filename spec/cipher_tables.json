@@ -1,5 +1,5 @@
 {
- "_comment": "Tables du brouillage JL_SPP DMX (Code.java de l'appli RY-AI). password[k][v] = octet brouille ; decode[k] = permutation inverse de password[k] ; sin = table de 256 valeurs (choix de la table : sin[codeNum] % 5).",
+ "_comment": "Scrambling tables of the JL_SPP DMX protocol (Code.java of the RY-AI app). password[k][v] = scrambled byte; decode[k] = inverse permutation of password[k]; sin = 256-value table (table choice: sin[codeNum] % 5).",
  "password": [
   [
    189,

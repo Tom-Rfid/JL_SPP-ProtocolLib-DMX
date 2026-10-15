@@ -1,9 +1,9 @@
 """
-Test de liaison : fait clignoter les canaux 1..N une fois par seconde.
-C'est le test qui a valide le protocole sur le vrai boitier.
+Link test: makes channels 1..N blink once per second.
+This is the test that validated the protocol on the real interface.
 
     pip install pyserial
-    python examples/blink.py COM6 44
+    python examples/blink.py COM6 44        (port, last channel)
 """
 
 import sys
@@ -16,8 +16,8 @@ from jlspp_dmx import DmxLink  # noqa: E402
 port = sys.argv[1] if len(sys.argv) > 1 else "COM6"
 last_channel = int(sys.argv[2]) if len(sys.argv) > 2 else 44
 
-with DmxLink(port, on_error=lambda e: print("liaison perdue :", e)) as link:
-    print(f"Clignotement des canaux 1 a {last_channel} sur {port} - Ctrl+C pour arreter.")
+with DmxLink(port, on_error=lambda e: print("link lost:", e)) as link:
+    print(f"Blinking channels 1 to {last_channel} on {port} - Ctrl+C to stop.")
     try:
         on = False
         while True:
@@ -26,4 +26,4 @@ with DmxLink(port, on_error=lambda e: print("liaison perdue :", e)) as link:
             time.sleep(1)
     except KeyboardInterrupt:
         link.blackout()
-        link.send_frame()
+        link.send_frame()  # make sure the fixtures end dark

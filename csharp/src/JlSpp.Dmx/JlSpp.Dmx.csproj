@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Protocole DMX JL_SPP (boitiers Bluetooth "USB-RDM-DMX", appli RY-AI).
-    netstandard2.0 : utilisable depuis .NET 6/8/10, .NET Framework 4.6.1+, MAUI (Android), Unity.
+    JL_SPP DMX protocol ("USB-RDM-DMX" Bluetooth interfaces, RY-AI app) + fixture helpers.
+    netstandard2.0: usable from .NET 6/8/10, .NET Framework 4.6.1+, MAUI (Android), Unity.
   -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -10,10 +10,10 @@
     <Nullable>enable</Nullable>
     <RootNamespace>JlSpp.Dmx</RootNamespace>
     <PackageId>JlSpp.Dmx</PackageId>
-    <Version>0.1.0</Version>
-    <Description>Protocole DMX des boîtiers Bluetooth « USB-RDM-DMX » (Jieli JL_SPP, appli RY-AI).</Description>
+    <Version>0.2.0</Version>
+    <Description>DMX protocol of the "USB-RDM-DMX" Bluetooth interfaces (Jieli JL_SPP, RY-AI app), with Mindi Mini Spider and Chauvet Intimidator Spot 260X helpers.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Pas d'avertissement pour chaque constante sans commentaire XML. -->
+    <!-- No warning for each self-explanatory enum member without an XML comment. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 

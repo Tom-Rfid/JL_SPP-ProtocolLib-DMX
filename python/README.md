@@ -46,11 +46,26 @@ spider.set_dimmer(universe, 255)
 spider.set_wings(universe, 200, mirror=True)
 ```
 
+Chauvet Intimidator Spot 260X (voir [../docs/fixtures/chauvet-intimidator-spot-260x.md](../docs/fixtures/chauvet-intimidator-spot-260x.md)) :
+
+```python
+from jlspp_dmx.fixtures import ChauvetSpot260X, GoboRotation, Spot260XColor, Spot260XGobo
+
+spot = ChauvetSpot260X(address=17)          # mode 14 canaux par défaut
+spot.light_on(universe)                     # dimmer 100 % + obturateur ouvert
+spot.set_pan_degrees(universe, 270)
+spot.set_color(universe, Spot260XColor.RED)
+spot.set_gobo(universe, Spot260XGobo.GOBO_3)
+spot.set_gobo_rotation(universe, GoboRotation.CLOCKWISE, speed=100)
+link.set_universe(universe)
+```
+
 ## Exemples
 
 ```bash
 python python/examples/blink.py COM6
-python python/examples/spider_wings.py COM6
+python python/examples/spider_wings.py COM6 1
+python python/examples/spot260x_show.py COM6 17
 ```
 
 ## Tests

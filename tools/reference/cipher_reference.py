@@ -1,8 +1,13 @@
 """
-Port Python du chiffrement proprietaire trouve dans Code.java (app RY-AI / RYBT32).
-MASK / DRAG / SWIPE remplacent des constantes Android/Kotlin substituees par jadx
-(meme valeur numerique que des constantes visibles au moment de la decompilation,
-mais aucun rapport reel avec RecyclerView ou kotlinx.coroutines).
+REFERENCE implementation: Python port of the proprietary scrambling found in Code.java
+(RY-AI / RYBT32 Android app). Frames built with it were validated on the real interface;
+every other file of the project is generated from it or tested against it.
+
+MASK / DRAG / SWIPE stand for Android/Kotlin constants that jadx substituted for plain
+numbers (same numeric value as constants visible at decompilation time, but nothing to
+do with RecyclerView or kotlinx.coroutines). See docs/cipher.md.
+
+Run it directly to check the tables:  python tools/reference/cipher_reference.py
 """
 
 MASK = 127   # kotlinx.coroutines.scheduling.WorkQueueKt.MASK (BUFFER_CAPACITY-1 = 128-1)
@@ -29,7 +34,7 @@ sin = [MASK, 130, 133, 136, 139, 143, 146, 149, 152, 155, 158, 161, 164, 167, 17
 
 
 def encryption1(data: bytearray, start: int, length: int, code_num: int, mark_offset: int) -> bytearray:
-    """Equivalent de Code.Encryption1(byte[] bArr, int i, int i2, int i3, int i4)."""
+    """Same as Code.Encryption1(byte[] bArr, int i, int i2, int i3, int i4); returns a scrambled copy."""
     out = bytearray(data)
     table = password[sin[code_num] % 5]
     out[mark_offset] = sin[code_num] & 0xFF
@@ -41,7 +46,7 @@ def encryption1(data: bytearray, start: int, length: int, code_num: int, mark_of
 
 
 def decode_frame(data: bytearray, start: int, length: int, mark_offset: int) -> bytearray:
-    """Equivalent de Code.Decode(byte[] bArr, int i, int i2, int i3)."""
+    """Same as Code.Decode(byte[] bArr, int i, int i2, int i3); returns an unscrambled copy."""
     out = bytearray(data)
     table = decode[data[mark_offset] % 5]
     key = data[mark_offset + 1]
@@ -57,17 +62,17 @@ if __name__ == "__main__":
     for i, row in enumerate(password):
         s, u = sum(row), len(set(row))
         valid = (len(row) == 256 and s == 32640 and u == 256)
-        print(f"password[{i}] len={len(row)} sum={s} unique={u} -> {'OK' if valid else 'ERREUR'}")
+        print(f"password[{i}] len={len(row)} sum={s} unique={u} -> {'OK' if valid else 'ERROR'}")
         ok &= valid
     for i, row in enumerate(decode):
         s, u = sum(row), len(set(row))
         valid = (len(row) == 256 and s == 32640 and u == 256)
-        print(f"decode[{i}]   len={len(row)} sum={s} unique={u} -> {'OK' if valid else 'ERREUR'}")
+        print(f"decode[{i}]   len={len(row)} sum={s} unique={u} -> {'OK' if valid else 'ERROR'}")
         ok &= valid
     print(f"sin len={len(sin)} min={min(sin)} max={max(sin)}")
     ok &= (len(sin) == 256 and 0 <= min(sin) and max(sin) <= 255)
 
-    # Test croise : encrypt puis decode doit redonner les octets d'origine
+    # Round trip: scrambling then unscrambling must give back the original bytes
     import random
     random.seed(1)
     buf = bytearray(600)
@@ -77,8 +82,8 @@ if __name__ == "__main__":
         enc = encryption1(buf, 5, 512, code_num, 517)
         dec = decode_frame(enc, 5, 512, 517)
         roundtrip_ok = dec[5:517] == buf[5:517]
-        print(f"round-trip code_num={code_num}: {'OK' if roundtrip_ok else 'ECHEC'}")
+        print(f"round-trip code_num={code_num}: {'OK' if roundtrip_ok else 'FAILED'}")
         ok &= roundtrip_ok
 
     print()
-    print("RESULTAT GLOBAL:", "TOUT EST VALIDE" if ok else "DES ERREURS SUBSISTENT")
+    print("RESULT:", "EVERYTHING IS VALID" if ok else "ERRORS FOUND")

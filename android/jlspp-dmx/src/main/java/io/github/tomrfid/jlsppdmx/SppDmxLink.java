@@ -9,36 +9,40 @@ import androidx.annotation.RequiresPermission;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
- * Liaison Bluetooth SPP avec le boitier, comme l'appli RY-AI ({@code BtClient.java}) :
- * socket RFCOMM sur l'UUID SPP standard, handshake, puis une trame toutes les 100 ms.
+ * Bluetooth SPP link to the interface, like the RY-AI app ({@code BtClient.java}):
+ * RFCOMM socket on the standard SPP UUID, handshake, then one frame every 100 ms.
  *
  * <pre>
- * SppDmxLink link = new SppDmxLink(device);   // BluetoothDevice deja appaire ("RY-...")
- * link.connect();                             // bloquant : hors du thread principal
+ * SppDmxLink link = new SppDmxLink(device);   // already paired BluetoothDevice ("RY-...")
+ * link.connect();                             // blocking: not on the main thread
  * link.start();
  * link.setChannel(1, 255);
  * ...
  * link.close();
  * </pre>
  *
- * Android 12+ : la permission BLUETOOTH_CONNECT doit avoir ete accordee a l'execution.
+ * Android 12+: the BLUETOOTH_CONNECT permission must have been granted at runtime.
  */
 public final class SppDmxLink implements AutoCloseable {
 
-    /** UUID SPP standard, celui utilise par l'appli d'origine. */
+    /** Standard SPP UUID, the one used by the original app. */
     public static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-    /** Appele depuis le thread d'envoi quand la liaison est perdue. */
+    private static final int MIN_INTERVAL_MS = 20;
+    private static final int MAX_INTERVAL_MS = 1000;
+
+    /** Called from the sending thread when the link is lost. */
     public interface Listener {
         void onConnectionLost(Exception error);
     }
 
     private final BluetoothDevice device;
-    private final byte[] universe = new byte[DmxFrame.UNIVERSE_SIZE];
-    private final Object lock = new Object();
+    private final byte[] universe = new byte[DmxFrame.UNIVERSE_SIZE]; // index 0 = channel 1
+    private final Object lock = new Object();                         // protects universe
     private BluetoothSocket socket;
     private OutputStream out;
     private Thread thread;
@@ -55,69 +59,83 @@ public final class SppDmxLink implements AutoCloseable {
         this.listener = listener;
     }
 
+    /** Delay between two frames (20..1000 ms; 100 = original app). */
     public void setSendIntervalMs(int ms) {
-        intervalMs = Math.max(20, Math.min(1000, ms));
+        intervalMs = Math.max(MIN_INTERVAL_MS, Math.min(MAX_INTERVAL_MS, ms));
     }
 
-    /** channel : 1..512, value : 0..255. */
+    // ------------------------------------------------------------------ channels
+
+    /** Sets one channel. channel: 1..512, value: 0..255. */
     public void setChannel(int channel, int value) {
-        if (channel < 1 || channel > DmxFrame.UNIVERSE_SIZE) {
-            throw new IllegalArgumentException("Un canal DMX va de 1 a 512");
-        }
+        checkChannel(channel);
         synchronized (lock) {
             universe[channel - 1] = (byte) value;
         }
     }
 
-    /** Remplace tout l'univers (512 octets, index 0 = canal 1). */
+    /** Current value of one channel (1..512). */
+    public int getChannel(int channel) {
+        checkChannel(channel);
+        synchronized (lock) {
+            return universe[channel - 1] & 0xFF;
+        }
+    }
+
+    /** Replaces the whole universe (512 bytes, index 0 = channel 1). */
     public void setUniverse(byte[] values) {
+        DmxFrame.checkUniverse(values);
         synchronized (lock) {
             System.arraycopy(values, 0, universe, 0, DmxFrame.UNIVERSE_SIZE);
         }
     }
 
-    public void blackout() {
+    /** Copy of the current universe. */
+    public byte[] snapshot() {
         synchronized (lock) {
-            java.util.Arrays.fill(universe, (byte) 0);
+            return universe.clone();
         }
     }
 
-    /** Ouvre la socket RFCOMM et envoie le handshake. BLOQUANT : ne pas appeler sur le thread UI. */
+    /** Sets every channel to 0. */
+    public void blackout() {
+        synchronized (lock) {
+            Arrays.fill(universe, (byte) 0);
+        }
+    }
+
+    // ---------------------------------------------------------------- connection
+
+    /** Opens the RFCOMM socket and sends the handshake. BLOCKING: do not call on the UI thread. */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     public void connect() throws IOException {
         BluetoothSocket s = device.createRfcommSocketToServiceRecord(SPP_UUID);
         s.connect();
         socket = s;
         out = s.getOutputStream();
-        out.write(DmxFrame.handshakeConnect());
-        out.flush();
+        write(DmxFrame.handshakeConnect());
     }
 
-    /** Envoie une trame avec l'etat actuel de l'univers. */
+    /** Sends one frame with the current state of the universe. */
     public void sendFrame() throws IOException {
         if (out == null) {
-            throw new IllegalStateException("Non connecte : appelle connect()");
+            throw new IllegalStateException("Not connected: call connect() first");
         }
-        byte[] snapshot;
-        synchronized (lock) {
-            snapshot = universe.clone();
-        }
-        codeNum = (codeNum + 1) & 0xFF;
-        out.write(DmxFrame.build(snapshot, codeNum));
-        out.flush();
+        write(DmxFrame.build(snapshot(), nextCodeNum()));
     }
 
-    /** Demarre l'envoi continu dans un thread d'arriere-plan. */
+    /** Starts sending frames continuously from a background thread. */
     public void start() {
         if (running) {
             return;
         }
         running = true;
-        thread = new Thread(this::loop, "jlspp-dmx-send");
+        thread = new Thread(this::sendLoop, "jlspp-dmx-send");
         thread.setDaemon(true);
         thread.start();
     }
 
+    /** Stops the background sending (the socket stays open). */
     public void stop() {
         running = false;
         Thread t = thread;
@@ -131,50 +149,80 @@ public final class SppDmxLink implements AutoCloseable {
         thread = null;
     }
 
-    /** Arret, handshake de deconnexion, fermeture de la socket. */
+    /** Stops sending, sends the disconnect handshake and closes the socket. */
     @Override
     public void close() {
         stop();
         try {
             if (out != null) {
-                out.write(DmxFrame.handshakeDisconnect());
-                out.flush();
+                write(DmxFrame.handshakeDisconnect());
             }
         } catch (IOException ignored) {
-            // le boitier a peut-etre deja coupe
+            // the interface may already have dropped the link
         }
         try {
             if (socket != null) {
                 socket.close();
             }
         } catch (IOException ignored) {
-            // rien a faire
+            // nothing more to do
         }
         socket = null;
         out = null;
     }
 
-    private void loop() {
+    // ------------------------------------------------------------------ internals
+
+    private static void checkChannel(int channel) {
+        if (channel < 1 || channel > DmxFrame.UNIVERSE_SIZE) {
+            throw new IllegalArgumentException("A DMX channel goes from 1 to 512");
+        }
+    }
+
+    private void write(byte[] data) throws IOException {
+        out.write(data);
+        out.flush();
+    }
+
+    /** Counter written in each frame (any value works, the original app increments it). */
+    private int nextCodeNum() {
+        codeNum = (codeNum + 1) & 0xFF;
+        return codeNum;
+    }
+
+    private void sendLoop() {
         long next = System.nanoTime();
         while (running) {
             try {
                 sendFrame();
             } catch (Exception e) {
                 running = false;
-                Listener l = listener;
-                if (l != null) {
-                    l.onConnectionLost(e);
-                }
+                notifyConnectionLost(e);
                 return;
             }
             next += intervalMs * 1_000_000L;
-            long sleepMs = Math.max(1, (next - System.nanoTime()) / 1_000_000L);
-            try {
-                Thread.sleep(sleepMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (!sleepUntil(next)) {
                 return;
             }
+        }
+    }
+
+    /** Sleeps until the given System.nanoTime(); false if the thread was interrupted. */
+    private static boolean sleepUntil(long nanoTime) {
+        long sleepMs = Math.max(1, (nanoTime - System.nanoTime()) / 1_000_000L);
+        try {
+            Thread.sleep(sleepMs);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private void notifyConnectionLost(Exception error) {
+        Listener l = listener;
+        if (l != null) {
+            l.onConnectionLost(error);
         }
     }
 }

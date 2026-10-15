@@ -1,10 +1,11 @@
 """
-jlspp_dmx - protocole DMX des boitiers Bluetooth « USB-RDM-DMX » (puce Jieli, service JL_SPP,
-appli Android RY-AI).
+jlspp_dmx - DMX protocol of the "USB-RDM-DMX" Bluetooth interfaces (Jieli chip,
+JL_SPP service, RY-AI Android app).
 
     from jlspp_dmx import build_frame, decode_frame, DmxLink
+    from jlspp_dmx.fixtures import ChauvetSpot260X, MindiSpider
 
-Voir docs/protocol.md pour la specification.
+See docs/protocol.md for the specification.
 """
 
 from .cipher import decrypt, encrypt
@@ -22,7 +23,7 @@ from .frame import (
 )
 from .link import DmxLink
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "encrypt", "decrypt",

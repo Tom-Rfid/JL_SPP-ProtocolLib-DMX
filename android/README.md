@@ -13,6 +13,7 @@ Module de librairie Android (Java 8, minSdk 21), package `io.github.tomrfid.jlsp
 | `Cipher`, `CipherTables` | brouillage (tables générées) |
 | `SppDmxLink` | connexion RFCOMM au boîtier appairé + envoi à 10 Hz |
 | `MindiSpider` | canaux du Mindi Mini Spider |
+| `ChauvetSpot260X` | Chauvet Intimidator Spot 260X (modes 8 et 14 canaux) |
 
 ## Utilisation
 
@@ -22,6 +23,12 @@ SppDmxLink link = new SppDmxLink(device);
 link.connect();                 // bloquant : hors du thread UI
 link.start();
 link.setChannel(1, 255);        // canaux 1..512
+
+byte[] universe = new byte[512];
+ChauvetSpot260X spot = new ChauvetSpot260X(17);
+spot.lightOn(universe, 255);
+spot.setColor(universe, ChauvetSpot260X.Color.RED);
+link.setUniverse(universe);
 // ...
 link.close();
 ```

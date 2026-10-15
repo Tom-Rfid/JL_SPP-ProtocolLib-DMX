@@ -18,11 +18,12 @@ docs/                      la spécification
   platforms.md             se connecter sous Windows / Linux / macOS / Android
   reverse-engineering.md   comment le protocole a été retrouvé
   fixtures/
-    mindi-mini-spider.md   messagerie DMX du Mindi Mini Spider (et son décalage d'adresse)
+    mindi-mini-spider.md             messagerie DMX du Mindi Mini Spider (et son décalage d'adresse)
+    chauvet-intimidator-spot-260x.md messagerie DMX de la Chauvet Intimidator Spot 260X (8 et 14 canaux)
 spec/                      données de référence lisibles par programme
   cipher_tables.json       tables de brouillage
   test_vectors.json        trames de test (univers → trame attendue)
-  fixtures/                profils d'appareils
+  fixtures/                tables DMX des appareils (JSON)
 python/                    librairie Python (pyserial)
 c/                         librairie C99 sans dépendance (+ exemple Win32/POSIX)
 csharp/                    librairie .NET Standard 2.0 (+ tests xunit)
@@ -41,9 +42,13 @@ tools/                     référence et générateurs (tables, vecteurs de tes
 | Android | ⚠ écrite d'après l'appli d'origine, **pas encore compilée ni testée** |
 | Scènes autonomes, RDM | 🔍 lu dans le code décompilé, à vérifier |
 | Mindi Mini Spider | ✅ canaux et décalage d'adresse ; ❓ couleur et position des LED |
+| Chauvet Intimidator Spot 260X | 📄 table DMX officielle Chauvet (guide rapide Rev. 1), modes 8 et 14 canaux |
 
 Les quatre librairies produisent octet pour octet les mêmes trames : elles sont
-testées contre [`spec/test_vectors.json`](spec/test_vectors.json).
+testées contre [`spec/test_vectors.json`](spec/test_vectors.json). Chacune fournit
+aussi des aides par appareil (`MindiSpider`, `ChauvetSpot260X`) : une fonction
+lisible par action (`set_color`, `set_gobo`, `set_strobe`, `reset`…) plutôt que des
+numéros de canaux et des valeurs à retenir. Le code est commenté en anglais.
 
 ## Le protocole en bref
 
@@ -79,6 +84,18 @@ from jlspp_dmx import DmxLink
 with DmxLink("COM6") as link:    # handshake + envoi continu
     link.set_channel(1, 255)
     time.sleep(5)
+```
+
+Avec les aides d'appareils :
+
+```python
+from jlspp_dmx.fixtures import ChauvetSpot260X, Spot260XColor
+
+universe = bytearray(512)
+spot = ChauvetSpot260X(address=17)
+spot.light_on(universe)
+spot.set_color(universe, Spot260XColor.BLUE)
+link.set_universe(universe)
 ```
 
 **C#**

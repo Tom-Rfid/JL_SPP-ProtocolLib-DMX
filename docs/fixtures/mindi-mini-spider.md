@@ -15,8 +15,8 @@ Exemple avec l'adresse affichée **1** : canal 1 ignoré, moteur 1 sur le canal 
 reset sur le canal 16. L'appareil suivant se place au canal **17**.
 
 Les librairies appliquent ce décalage par défaut (`address_quirk=True` en Python,
-`addressQuirk: true` en C# et Java, `JLSPP_SPIDER_QUIRK_OFFSET 1` en C) : on leur
-donne l'adresse **affichée** sur l'appareil.
+`addressQuirk: true` en C# et Java, `quirk_offset = 1` posé par `jlspp_spider_init`
+en C) : on leur donne l'adresse **affichée** sur l'appareil.
 
 ## Canaux
 
@@ -56,7 +56,7 @@ Le dimmer général (canal Spider 3) doit être ouvert, sinon les LED restent
 | Pas de strobe | strobe = 0 |
 
 Exemple d'univers (adresse affichée 1, ailes en miroir, dimmer à fond, LED 1 et 5
-à fond) — c'est le vecteur de test `mindi_spider_adresse1_code7` :
+à fond) — c'est le vecteur de test `mindi_spider_address1_code7` :
 
 | Canal DMX | 2 | 3 | 4 | 6 | 10 | autres |
 |---|---|---|---|---|---|---|
@@ -82,6 +82,14 @@ spider.SetWings(universe, 200, mirror: true);
 
 ```c
 uint8_t universe[512] = {0};
-jlspp_spider_set_wings(universe, 1, 200, 1);
-universe[jlspp_spider_index(1, JLSPP_SPIDER_DIMMER)] = 255;
+jlspp_spider spider;
+jlspp_spider_init(&spider, 1);
+jlspp_spider_set_dimmer(&spider, universe, 255);
+jlspp_spider_set_wings(&spider, universe, 200, 1);
+```
+
+```java
+MindiSpider spider = new MindiSpider(1);
+spider.setDimmer(universe, 255);
+spider.setWings(universe, 200, true);
 ```

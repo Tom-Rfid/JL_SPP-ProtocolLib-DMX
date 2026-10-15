@@ -38,6 +38,18 @@ spider.SetDimmer(universe, 255);
 spider.SetWings(universe, 200, mirror: true);
 ```
 
+Chauvet Intimidator Spot 260X (voir [../docs/fixtures/chauvet-intimidator-spot-260x.md](../docs/fixtures/chauvet-intimidator-spot-260x.md)) :
+
+```csharp
+var spot = new ChauvetSpot260X(address: 17);            // mode 14 canaux par défaut
+spot.LightOn(universe);                                 // dimmer 100 % + obturateur ouvert
+spot.SetPanDegrees(universe, 270);
+spot.SetColor(universe, Spot260XColor.Red);
+spot.SetGobo(universe, Spot260XGobo.Gobo3);
+spot.SetStrobe(universe, speed: 200, StrobeEffect.Pulse);
+link.SetUniverse(universe);
+```
+
 ## Compilation et tests
 
 ```bash

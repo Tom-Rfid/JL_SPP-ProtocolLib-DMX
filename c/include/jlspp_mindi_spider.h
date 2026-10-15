@@ -1,47 +1,72 @@
 /*
- * jlspp_mindi_spider.h - messagerie DMX du Mindi Mini Spider 8x3W RGBW (15 canaux).
- * Voir docs/fixtures/mindi-mini-spider.md.
+ * jlspp_mindi_spider.h - DMX messages of the Mindi Mini Spider 8x3W RGBW (15-channel mode).
+ * See docs/fixtures/mindi-mini-spider.md.
  *
- * BIZARRERIE CONSTATEE : regle sur l'adresse N, le Spider ignore le canal N et ecoute
- * a partir de N+1. JLSPP_SPIDER_QUIRK_OFFSET vaut 1 ; mettre 0 si un autre exemplaire
- * se comporte normalement.
+ * ADDRESS QUIRK (observed on the fixture): when set to address N, the Spider ignores
+ * channel N and listens from N+1. jlspp_spider_init() applies that shift: give it the
+ * address SHOWN on the fixture. Set quirk_offset to 0 for a unit that behaves normally.
+ *
+ *     jlspp_spider spider;
+ *     jlspp_spider_init(&spider, 1);
+ *     jlspp_spider_set_dimmer(&spider, universe, 255);
+ *     jlspp_spider_set_wings(&spider, universe, 200, 1);
  */
 #ifndef JLSPP_MINDI_SPIDER_H
 #define JLSPP_MINDI_SPIDER_H
 
 #include <stdint.h>
 
-#define JLSPP_SPIDER_QUIRK_OFFSET 1
+#include "jlspp_dmx.h"
 
-/* Canaux du Spider (1..15), d'apres la notice. */
-enum jlspp_spider_channel {
-    JLSPP_SPIDER_MOTOR_1 = 1,      /* position aile 1 : 0..255 = 0..135 degres */
-    JLSPP_SPIDER_MOTOR_2 = 2,      /* position aile 2 */
-    JLSPP_SPIDER_DIMMER = 3,       /* dimmer general */
-    JLSPP_SPIDER_STROBE = 4,       /* 0 = pas de strobe, puis vitesse */
-    JLSPP_SPIDER_LED_1 = 5,        /* LED 1..8 = canaux 5..12 (couleur supposee R,V,B,Blanc x2) */
-    JLSPP_SPIDER_MACRO = 13,       /* programmes integres */
-    JLSPP_SPIDER_EFFECT_SPEED = 14,
-    JLSPP_SPIDER_RESET = 15        /* laisser a 0 */
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* Index dans l'univers (0 = canal 1) d'une fonction du Spider dont l'adresse AFFICHEE est address. */
-static inline int jlspp_spider_index(int address, int channel)
-{
-    return address - 1 + channel - 1 + JLSPP_SPIDER_QUIRK_OFFSET;
+#define JLSPP_SPIDER_CHANNEL_COUNT 15
+#define JLSPP_SPIDER_LED_COUNT     8
+
+/* Channels of the Spider (1..15), from its manual. */
+typedef enum {
+    JLSPP_SPIDER_MOTOR_1 = 1,       /* wing 1 position: 0..255 = 0..135 degrees */
+    JLSPP_SPIDER_MOTOR_2 = 2,       /* wing 2 position */
+    JLSPP_SPIDER_DIMMER = 3,        /* master dimmer */
+    JLSPP_SPIDER_STROBE = 4,        /* 0 = no strobe, then flash speed */
+    JLSPP_SPIDER_LED_1 = 5,         /* LED 1..8 = channels 5..12 (color ASSUMED: R, G, B, W twice) */
+    JLSPP_SPIDER_MACRO = 13,        /* built-in effect programs */
+    JLSPP_SPIDER_EFFECT_SPEED = 14, /* effect speed, slow -> fast */
+    JLSPP_SPIDER_RESET = 15         /* keep at 0 */
+} jlspp_spider_channel;
+
+/* One Spider in the universe. */
+typedef struct {
+    int address;      /* address shown on the fixture */
+    int quirk_offset; /* 1 = ignores its first channel (observed on our unit), 0 = normal */
+} jlspp_spider;
+
+/* Fills `spider` (quirk_offset = 1). JLSPP_ERROR if the 16 channels do not fit. */
+int jlspp_spider_init(jlspp_spider *spider, int address);
+
+/* Absolute DMX channel (1..512) of a Spider channel. */
+int jlspp_spider_dmx_channel(const jlspp_spider *spider, int spider_channel);
+
+/* Writes one Spider channel (1..15) into the universe. */
+void jlspp_spider_set(const jlspp_spider *spider, uint8_t *universe, int spider_channel, uint8_t value);
+
+/* Master dimmer. Must be open, otherwise the LEDs stay dark. */
+void jlspp_spider_set_dimmer(const jlspp_spider *spider, uint8_t *universe, uint8_t level);
+
+/* Strobe speed; 0 = no strobe. */
+void jlspp_spider_set_strobe(const jlspp_spider *spider, uint8_t *universe, uint8_t speed);
+
+/* Intensity of one LED (1..8). JLSPP_ERROR if led is out of range. */
+int jlspp_spider_set_led(const jlspp_spider *spider, uint8_t *universe, int led, uint8_t level);
+
+/* Both wings. mirror != 0: wing 2 takes the symmetric position (255 - position), so the
+ * wings start from opposite sides and meet in the middle. */
+void jlspp_spider_set_wings(const jlspp_spider *spider, uint8_t *universe, uint8_t position, int mirror);
+
+#ifdef __cplusplus
 }
-
-/* Ailes : mirror != 0 -> l'aile 2 prend la position symetrique (255 - position). */
-static inline void jlspp_spider_set_wings(uint8_t *universe, int address, uint8_t position, int mirror)
-{
-    universe[jlspp_spider_index(address, JLSPP_SPIDER_MOTOR_1)] = position;
-    universe[jlspp_spider_index(address, JLSPP_SPIDER_MOTOR_2)] = mirror ? (uint8_t)(255 - position) : position;
-}
-
-/* led : 1..8 */
-static inline void jlspp_spider_set_led(uint8_t *universe, int address, int led, uint8_t level)
-{
-    universe[jlspp_spider_index(address, JLSPP_SPIDER_LED_1 + led - 1)] = level;
-}
+#endif
 
 #endif /* JLSPP_MINDI_SPIDER_H */

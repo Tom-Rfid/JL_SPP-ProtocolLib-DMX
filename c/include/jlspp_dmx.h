@@ -1,13 +1,25 @@
 /*
- * jlspp_dmx.h - protocole DMX des boitiers Bluetooth "USB-RDM-DMX" (puce Jieli,
- * service JL_SPP, appli Android RY-AI).
+ * jlspp_dmx.h - DMX protocol of the "USB-RDM-DMX" Bluetooth interfaces (Jieli chip,
+ * JL_SPP service, RY-AI Android app).
  *
- * Bibliotheque C99 SANS dependance ni entree/sortie : elle construit et decode les
- * trames. L'ecriture sur le port serie (COM Windows, /dev/rfcomm0 Linux...) est a la
- * charge de l'appelant : voir examples/blink.c.
+ * C99 library with NO dependency, NO allocation and NO input/output: it builds and
+ * decodes frames. Writing them to the serial port (Windows COM port, /dev/rfcomm0 on
+ * Linux...) is up to the caller: see examples/blink.c.
  *
- * Convention : un "univers" = 512 octets, index 0 = canal DMX 1.
- * Specification : docs/protocol.md
+ * Convention: a "universe" is 512 bytes, index 0 = DMX channel 1.
+ * Specification: docs/protocol.md
+ *
+ * Typical use:
+ *
+ *     uint8_t universe[JLSPP_UNIVERSE_SIZE] = {0};
+ *     uint8_t frame[JLSPP_FRAME_LEN];
+ *     uint8_t code = 0;
+ *
+ *     write_port(JLSPP_HANDSHAKE_CONNECT, sizeof JLSPP_HANDSHAKE_CONNECT);
+ *     every JLSPP_SEND_INTERVAL_MS:
+ *         jlspp_build_frame(universe, code++, 0, 0, frame);
+ *         write_port(frame, JLSPP_FRAME_LEN);
+ *     write_port(JLSPP_HANDSHAKE_DISCONNECT, sizeof JLSPP_HANDSHAKE_DISCONNECT);
  */
 #ifndef JLSPP_DMX_H
 #define JLSPP_DMX_H
@@ -19,38 +31,45 @@
 extern "C" {
 #endif
 
-#define JLSPP_FRAME_LEN     521  /* taille d'une trame DMX */
-#define JLSPP_UNIVERSE_SIZE 512  /* nombre de canaux */
-#define JLSPP_PAYLOAD_START 5    /* octet du canal 1 dans la trame */
-#define JLSPP_MARKER_OFFSET 517  /* octets de cle : [517] = sin[code], [518] = code */
-#define JLSPP_SEND_INTERVAL_MS 100 /* cadence de l'appli d'origine */
+#define JLSPP_FRAME_LEN        521 /* bytes in one DMX frame */
+#define JLSPP_UNIVERSE_SIZE    512 /* DMX channels in one universe */
+#define JLSPP_PAYLOAD_START    5   /* frame byte holding DMX channel 1 */
+#define JLSPP_MARKER_OFFSET    517 /* key bytes: [517] = sin[code], [518] = code */
+#define JLSPP_SEND_INTERVAL_MS 100 /* sending rate of the original app */
 
-/* Handshakes en clair : connexion juste apres l'ouverture, deconnexion avant la fermeture. */
+/* Return codes of the functions that can fail. */
+#define JLSPP_OK    0
+#define JLSPP_ERROR (-1)
+
+/* Handshakes, sent in clear: right after opening the port / right before closing it. */
 extern const uint8_t JLSPP_HANDSHAKE_CONNECT[6];
 extern const uint8_t JLSPP_HANDSHAKE_DISCONNECT[8];
 
 /*
- * Brouillage (Code.Encryption1) EN PLACE : brouille buf[start .. start+length-1] et ecrit
- * les 2 octets de cle a buf[marker] et buf[marker+1].
+ * Scrambling (Code.Encryption1), IN PLACE: scrambles buf[start .. start+length-1] and
+ * writes the 2 key bytes at buf[marker] and buf[marker+1].
  */
 void jlspp_encrypt(uint8_t *buf, size_t start, size_t length, uint8_t code_num, size_t marker);
 
-/* Operation inverse (Code.Decode) EN PLACE, en relisant la cle ecrite dans buf. */
+/* Inverse operation (Code.Decode), IN PLACE, reading the key back from buf. */
 void jlspp_decrypt(uint8_t *buf, size_t start, size_t length, size_t marker);
 
 /*
- * Construit une trame complete dans out (JLSPP_FRAME_LEN octets).
- * scene / speed : octets 3 et 4 (0 et 0 en pilotage direct).
+ * Builds a complete frame into out (JLSPP_FRAME_LEN bytes).
+ *   universe : 512 channel values, index 0 = channel 1
+ *   code_num : counter 0..255, normally incremented for every frame
+ *   scene    : byte 3 (0 = direct control)
+ *   speed    : byte 4 (0 in direct control)
  */
 void jlspp_build_frame(const uint8_t universe[JLSPP_UNIVERSE_SIZE], uint8_t code_num,
                        uint8_t scene, uint8_t speed, uint8_t out[JLSPP_FRAME_LEN]);
 
-/* 1 si la trame a la bonne longueur logique et les marqueurs KT / TK, 0 sinon. */
+/* 1 if the frame has the clear KT / TK markers, 0 otherwise. */
 int jlspp_is_frame(const uint8_t frame[JLSPP_FRAME_LEN]);
 
 /*
- * Retrouve l'univers en clair d'une trame. Retourne 0 si OK, -1 si ce n'est pas une
- * trame valide. code_num peut etre NULL.
+ * Gets the clear universe back from a frame. Returns JLSPP_OK, or JLSPP_ERROR if this
+ * is not a valid frame. code_num may be NULL.
  */
 int jlspp_decode_frame(const uint8_t frame[JLSPP_FRAME_LEN],
                        uint8_t universe_out[JLSPP_UNIVERSE_SIZE], uint8_t *code_num);

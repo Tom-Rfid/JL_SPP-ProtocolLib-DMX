@@ -1,20 +1,20 @@
 """
-Liaison serie avec le boitier JL_SPP (Bluetooth SPP vu comme un port serie).
+Serial link to the JL_SPP interface (Bluetooth SPP seen as a serial port).
 
-    Windows : port COM "sortant" cree a l'appairage (ex. COM6)
-    Linux   : /dev/rfcomm0 apres `rfcomm bind` (voir docs/platforms.md)
-    macOS   : /dev/tty.<nom>-... (non teste)
+    Windows : "outgoing" COM port created when pairing (e.g. COM6)
+    Linux   : /dev/rfcomm0 after `rfcomm bind` (see docs/platforms.md)
+    macOS   : /dev/tty.<name>-... (untested)
 
-Exemple ::
+Example::
 
     from jlspp_dmx import DmxLink
 
-    with DmxLink("COM6") as link:      # ouvre, envoie le handshake, demarre l'envoi a 10 Hz
+    with DmxLink("COM6") as link:      # opens, sends the handshake, starts sending at 10 Hz
         link.set_channel(1, 255)
         time.sleep(5)
-                                       # a la sortie : arret, handshake de deconnexion, fermeture
+                                       # on exit: stop, disconnect handshake, close
 
-Necessite pyserial (``pip install jlspp-dmx[serial]``).
+Requires pyserial (``pip install jlspp-dmx[serial]``).
 """
 
 import threading
@@ -24,101 +24,136 @@ from typing import Callable, Iterable, Optional
 from .frame import HANDSHAKE_CONNECT, HANDSHAKE_DISCONNECT, UNIVERSE_SIZE, build_frame
 
 
+def check_channel(channel: int) -> None:
+    """Raises ValueError unless 1 <= channel <= 512."""
+    if not 1 <= channel <= UNIVERSE_SIZE:
+        raise ValueError("a DMX channel goes from 1 to 512")
+
+
 class DmxLink:
-    """Envoie en continu l'univers DMX au boitier, comme l'appli d'origine (une trame
-    toutes les ``interval`` secondes, 0,1 s par defaut). Thread-safe : on peut modifier
-    les canaux depuis n'importe quel thread pendant que l'envoi tourne."""
+    """Keeps sending the DMX universe to the interface, like the original app (one
+    frame every ``interval`` seconds, 0.1 s by default).
+
+    Thread-safe: channels can be changed from any thread while frames are being sent.
+    """
 
     def __init__(self, port: str, interval: float = 0.1, baudrate: int = 9600,
                  on_error: Optional[Callable[[Exception], None]] = None):
+        """
+        :param port: serial port name ("COM6", "/dev/rfcomm0"...).
+        :param interval: seconds between two frames (0.1 = original app).
+        :param baudrate: irrelevant on a Bluetooth virtual port, kept for pyserial.
+        :param on_error: called from the sending thread if the link is lost.
+        """
         self.port_name = port
         self.interval = interval
-        self.baudrate = baudrate  # sans importance sur un port Bluetooth virtuel
+        self.baudrate = baudrate
         self.on_error = on_error
         self.frames_sent = 0
-        self._universe = bytearray(UNIVERSE_SIZE)
-        self._lock = threading.Lock()
+        self._universe = bytearray(UNIVERSE_SIZE)  # index 0 = channel 1
+        self._lock = threading.Lock()               # protects _universe
         self._serial = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
         self._code_num = 0
 
-    # ------------------------------------------------------------------ canaux
+    # ------------------------------------------------------------------ channels
 
     def set_channel(self, channel: int, value: int) -> None:
-        """channel : 1..512 ; value : 0..255."""
-        if not 1 <= channel <= UNIVERSE_SIZE:
-            raise ValueError("un canal DMX va de 1 a 512")
+        """Sets one channel. channel: 1..512; value: 0..255."""
+        check_channel(channel)
         with self._lock:
             self._universe[channel - 1] = value & 0xFF
 
     def set_channels(self, first_channel: int, values: Iterable[int]) -> None:
-        """Ecrit plusieurs canaux consecutifs a partir de ``first_channel``."""
+        """Sets consecutive channels starting at ``first_channel``."""
         for offset, value in enumerate(values):
             self.set_channel(first_channel + offset, value)
 
+    def set_universe(self, universe: Iterable[int]) -> None:
+        """Replaces the whole universe (512 values, index 0 = channel 1)."""
+        data = bytes(universe)
+        if len(data) != UNIVERSE_SIZE:
+            raise ValueError(f"a universe must hold {UNIVERSE_SIZE} values")
+        with self._lock:
+            self._universe[:] = data
+
     def get_channel(self, channel: int) -> int:
+        """Current value of one channel (1..512)."""
+        check_channel(channel)
         with self._lock:
             return self._universe[channel - 1]
 
     def blackout(self) -> None:
+        """Sets every channel to 0."""
         with self._lock:
             self._universe[:] = bytes(UNIVERSE_SIZE)
 
     def snapshot(self) -> bytes:
+        """Copy of the current universe."""
         with self._lock:
             return bytes(self._universe)
 
-    # --------------------------------------------------------------- connexion
+    # ---------------------------------------------------------------- connection
 
     def open(self) -> None:
-        """Ouvre le port et envoie le handshake de connexion."""
-        import serial  # import tardif : la partie trames reste utilisable sans pyserial
+        """Opens the port and sends the connect handshake."""
+        import serial  # late import: the frame functions stay usable without pyserial
 
         self._serial = serial.Serial(self.port_name, self.baudrate, timeout=1, write_timeout=2)
-        self._serial.write(HANDSHAKE_CONNECT)
-        self._serial.flush()
+        self._write(HANDSHAKE_CONNECT)
 
     def send_frame(self) -> None:
-        """Envoie une seule trame avec l'etat actuel de l'univers."""
+        """Sends a single frame with the current state of the universe."""
         if self._serial is None:
-            raise RuntimeError("port non ouvert : appelle open() d'abord")
-        self._code_num = (self._code_num + 1) & 0xFF
-        self._serial.write(build_frame(self.snapshot(), self._code_num))
+            raise RuntimeError("port not open: call open() first")
+        self._write(build_frame(self.snapshot(), self._next_code_num()))
         self.frames_sent += 1
 
     def start(self) -> None:
-        """Demarre l'envoi continu dans un thread d'arriere-plan."""
+        """Starts sending frames continuously from a background thread."""
         if self._running:
             return
         self._running = True
-        self._thread = threading.Thread(target=self._loop, name="jlspp-dmx-send", daemon=True)
+        self._thread = threading.Thread(target=self._send_loop, name="jlspp-dmx-send", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
+        """Stops the background sending (the port stays open)."""
         self._running = False
         if self._thread is not None and self._thread is not threading.current_thread():
             self._thread.join(timeout=2)
         self._thread = None
 
     def close(self) -> None:
-        """Arrete l'envoi, envoie le handshake de deconnexion et ferme le port."""
+        """Stops sending, sends the disconnect handshake and closes the port."""
         self.stop()
-        if self._serial is not None:
-            try:
-                self._serial.write(HANDSHAKE_DISCONNECT)
-                self._serial.flush()
-            except Exception:  # le boitier a peut-etre deja coupe
-                pass
-            self._serial.close()
-            self._serial = None
+        if self._serial is None:
+            return
+        try:
+            self._write(HANDSHAKE_DISCONNECT)
+        except Exception:  # the interface may already have dropped the link
+            pass
+        self._serial.close()
+        self._serial = None
 
-    def _loop(self) -> None:
+    # ------------------------------------------------------------------ internals
+
+    def _write(self, data: bytes) -> None:
+        self._serial.write(data)
+        self._serial.flush()
+
+    def _next_code_num(self) -> int:
+        """Counter 0..255 written in each frame (any value works, the original app increments it)."""
+        self._code_num = (self._code_num + 1) & 0xFF
+        return self._code_num
+
+    def _send_loop(self) -> None:
         next_time = time.monotonic()
         while self._running:
             try:
                 self.send_frame()
-            except Exception as exc:  # liaison perdue
+            except Exception as exc:  # link lost
                 self._running = False
                 if self.on_error is not None:
                     self.on_error(exc)

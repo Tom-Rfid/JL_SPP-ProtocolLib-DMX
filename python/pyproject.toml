@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jlspp-dmx"
-version = "0.1.0"
-description = "Protocole DMX des boîtiers Bluetooth « USB-RDM-DMX » (Jieli JL_SPP, appli RY-AI)"
+version = "0.2.0"
+description = "DMX protocol of the 'USB-RDM-DMX' Bluetooth interfaces (Jieli JL_SPP, RY-AI app), with fixture helpers"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []

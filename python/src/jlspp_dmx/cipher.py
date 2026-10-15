@@ -1,39 +1,65 @@
 """
-Brouillage JL_SPP DMX (portage de Code.java, appli Android RY-AI).
+Channel scrambling of the JL_SPP DMX protocol (port of Code.java, RY-AI Android app).
 
-Ce n'est pas de la cryptographie : une substitution par table (S-box) choisie selon
-un compteur ``code_num`` (0..255) que l'emetteur ecrit dans la trame. Il faut
-pourtant le reproduire exactement, sinon le boitier ignore les trames.
+This is NOT cryptography: it is a byte substitution (S-box) chosen by a counter
+``code_num`` (0..255) that the sender writes into the frame. It must still be
+reproduced exactly, otherwise the interface ignores the frames.
 
     table  = PASSWORD[SIN[code_num] % 5]
-    sortie = table[(octet + code_num) % 256]
-    trame[marker]     = SIN[code_num]
-    trame[marker + 1] = code_num
+    output = table[(byte + code_num) % 256]
+    frame[marker]     = SIN[code_num]
+    frame[marker + 1] = code_num
+
+See docs/cipher.md.
 """
 
 from ._tables import DECODE, PASSWORD, SIN
 
+TABLE_COUNT = 5  # number of substitution tables
+
+
+def scramble_table(code_num: int) -> bytes:
+    """Substitution table used for a given counter value."""
+    return PASSWORD[SIN[code_num] % TABLE_COUNT]
+
+
+def unscramble_table(sin_value: int) -> bytes:
+    """Inverse table, found from the SIN value written in the frame."""
+    return DECODE[sin_value % TABLE_COUNT]
+
+
+def scramble_byte(value: int, code_num: int, table: bytes) -> int:
+    """Scrambles one channel value: shift it by the counter, then substitute it."""
+    return table[(value + code_num) & 0xFF]
+
+
+def unscramble_byte(value: int, key: int, table: bytes) -> int:
+    """Inverse of scramble_byte: substitute back, then remove the counter shift."""
+    return (table[value] - key) & 0xFF
+
 
 def encrypt(frame: bytes, start: int, length: int, code_num: int, marker_offset: int) -> bytearray:
-    """Equivalent de ``Code.Encryption1`` : retourne une copie de ``frame`` dont
-    ``frame[start:start+length]`` est brouille et ou les 2 octets de cle sont ecrits
-    a ``marker_offset``."""
+    """Same as ``Code.Encryption1``.
+
+    Returns a copy of ``frame`` where ``frame[start:start+length]`` is scrambled and
+    the 2 key bytes are written at ``marker_offset`` and ``marker_offset + 1``.
+    """
     code_num &= 0xFF
+    table = scramble_table(code_num)
     out = bytearray(frame)
-    table = PASSWORD[SIN[code_num] % 5]
+    for pos in range(start, start + length):
+        out[pos] = scramble_byte(frame[pos], code_num, table)
     out[marker_offset] = SIN[code_num]
     out[marker_offset + 1] = code_num
-    for pos in range(start, start + length):
-        out[pos] = table[(frame[pos] + code_num) & 0xFF]
     return out
 
 
 def decrypt(frame: bytes, start: int, length: int, marker_offset: int) -> bytearray:
-    """Equivalent de ``Code.Decode`` : relit les 2 octets de cle ecrits dans la trame
-    et retrouve les octets en clair."""
-    out = bytearray(frame)
-    table = DECODE[frame[marker_offset] % 5]
+    """Same as ``Code.Decode``: reads the 2 key bytes back from the frame and
+    returns a copy where ``frame[start:start+length]`` is in clear."""
+    table = unscramble_table(frame[marker_offset])
     key = frame[marker_offset + 1]
+    out = bytearray(frame)
     for pos in range(start, start + length):
-        out[pos] = (table[frame[pos]] - key) & 0xFF
+        out[pos] = unscramble_byte(frame[pos], key, table)
     return out

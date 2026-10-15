@@ -6,20 +6,23 @@ using System.Threading;
 namespace JlSpp.Dmx
 {
     /// <summary>
-    /// Liaison serie avec le boitier (Bluetooth SPP vu comme un port serie : "COM6" sous
-    /// Windows, "/dev/rfcomm0" sous Linux). Envoie l'univers en continu dans un thread
-    /// d'arriere-plan, comme l'appli d'origine.
+    /// Serial link to the interface (Bluetooth SPP seen as a serial port: "COM6" on
+    /// Windows, "/dev/rfcomm0" on Linux). Keeps sending the universe from a background
+    /// thread, like the original app.
     /// <code>
     /// using var link = new DmxLink("COM6");
-    /// link.Open();            // handshake de connexion
-    /// link.Start();           // envoi continu (100 ms)
+    /// link.Open();            // connect handshake
+    /// link.Start();           // continuous sending (100 ms)
     /// link.SetChannel(1, 255);
     /// </code>
     /// </summary>
     public sealed class DmxLink : IDisposable
     {
-        private readonly object _universeLock = new object();
-        private readonly byte[] _universe = new byte[DmxFrame.UniverseSize];
+        private const int MinIntervalMs = 20;
+        private const int MaxIntervalMs = 1000;
+
+        private readonly object _universeLock = new object(); // protects _universe
+        private readonly byte[] _universe = new byte[DmxFrame.UniverseSize]; // index 0 = channel 1
         private readonly string _portName;
         private SerialPort? _port;
         private Thread? _thread;
@@ -28,54 +31,67 @@ namespace JlSpp.Dmx
         private byte _codeNum;
         private long _framesSent;
 
+        /// <param name="portName">"COM6", "/dev/rfcomm0"...</param>
         public DmxLink(string portName)
         {
             _portName = portName ?? throw new ArgumentNullException(nameof(portName));
         }
 
         /// <summary>
-        /// Leve depuis le thread d'envoi si l'ecriture echoue (Bluetooth coupe...). Dans une
-        /// interface graphique, repasser sur le thread de l'IHM avant d'y toucher.
+        /// Raised from the sending thread if a write fails (Bluetooth dropped...). In a GUI,
+        /// switch back to the UI thread before touching controls.
         /// </summary>
         public event EventHandler<Exception>? ConnectionLost;
 
+        /// <summary>True once <see cref="Open"/> succeeded.</summary>
         public bool IsOpen => _port != null && _port.IsOpen;
+
+        /// <summary>True while the background thread sends frames.</summary>
         public bool IsSending => _running;
+
+        /// <summary>Number of frames sent since the creation of the link.</summary>
         public long FramesSent => Interlocked.Read(ref _framesSent);
 
-        /// <summary>Intervalle entre deux trames (20 a 1000 ms ; 100 = appli d'origine).</summary>
+        /// <summary>Delay between two frames (20..1000 ms; 100 = original app).</summary>
         public int SendIntervalMs
         {
             get => _intervalMs;
-            set => _intervalMs = Math.Max(20, Math.Min(1000, value));
+            set => _intervalMs = Math.Max(MinIntervalMs, Math.Min(MaxIntervalMs, value));
         }
 
-        /// <summary>channel : 1..512.</summary>
+        // ------------------------------------------------------------------ channels
+
+        /// <summary>Sets one channel (1..512).</summary>
         public void SetChannel(int channel, byte value)
         {
-            if (channel < 1 || channel > DmxFrame.UniverseSize)
-            {
-                throw new ArgumentOutOfRangeException(nameof(channel), "Un canal DMX va de 1 a 512.");
-            }
+            CheckChannel(channel);
             lock (_universeLock)
             {
                 _universe[channel - 1] = value;
             }
         }
 
-        /// <summary>Remplace tout l'univers (512 octets, index 0 = canal 1).</summary>
+        /// <summary>Current value of one channel (1..512).</summary>
+        public byte GetChannel(int channel)
+        {
+            CheckChannel(channel);
+            lock (_universeLock)
+            {
+                return _universe[channel - 1];
+            }
+        }
+
+        /// <summary>Replaces the whole universe (512 bytes, index 0 = channel 1).</summary>
         public void SetUniverse(byte[] universe)
         {
-            if (universe is null || universe.Length != DmxFrame.UniverseSize)
-            {
-                throw new ArgumentException("512 octets attendus.", nameof(universe));
-            }
+            DmxFrame.CheckUniverse(universe);
             lock (_universeLock)
             {
                 Buffer.BlockCopy(universe, 0, _universe, 0, DmxFrame.UniverseSize);
             }
         }
 
+        /// <summary>Copy of the current universe.</summary>
         public byte[] Snapshot()
         {
             lock (_universeLock)
@@ -84,6 +100,7 @@ namespace JlSpp.Dmx
             }
         }
 
+        /// <summary>Sets every channel to 0.</summary>
         public void Blackout()
         {
             lock (_universeLock)
@@ -92,19 +109,20 @@ namespace JlSpp.Dmx
             }
         }
 
-        /// <summary>Ouvre le port et envoie le handshake. Peut bloquer quelques secondes (liaison Bluetooth).</summary>
+        // ---------------------------------------------------------------- connection
+
+        /// <summary>Opens the port and sends the connect handshake. May block a few seconds (Bluetooth link).</summary>
         public void Open()
         {
             if (IsOpen)
             {
                 return;
             }
-            var port = new SerialPort(_portName, 9600) { WriteTimeout = 2000 };
+            var port = new SerialPort(_portName, 9600) { WriteTimeout = 2000 }; // baud rate is irrelevant on Bluetooth
             try
             {
                 port.Open();
-                var hello = DmxFrame.HandshakeConnect();
-                port.Write(hello, 0, hello.Length);
+                Write(port, DmxFrame.HandshakeConnect());
             }
             catch
             {
@@ -114,17 +132,15 @@ namespace JlSpp.Dmx
             _port = port;
         }
 
-        /// <summary>Envoie une trame avec l'etat actuel de l'univers.</summary>
+        /// <summary>Sends one frame with the current state of the universe.</summary>
         public void SendFrame()
         {
-            var port = _port ?? throw new InvalidOperationException("Port non ouvert : appelle Open().");
-            _codeNum = unchecked((byte)(_codeNum + 1));
-            var frame = DmxFrame.Build(Snapshot(), _codeNum);
-            port.Write(frame, 0, frame.Length);
+            var port = _port ?? throw new InvalidOperationException("Port not open: call Open() first.");
+            Write(port, DmxFrame.Build(Snapshot(), NextCodeNum()));
             Interlocked.Increment(ref _framesSent);
         }
 
-        /// <summary>Demarre l'envoi continu.</summary>
+        /// <summary>Starts sending frames continuously from a background thread.</summary>
         public void Start()
         {
             if (_running)
@@ -133,13 +149,14 @@ namespace JlSpp.Dmx
             }
             if (!IsOpen)
             {
-                throw new InvalidOperationException("Port non ouvert : appelle Open().");
+                throw new InvalidOperationException("Port not open: call Open() first.");
             }
             _running = true;
-            _thread = new Thread(Loop) { IsBackground = true, Name = "JlSpp.Dmx send loop" };
+            _thread = new Thread(SendLoop) { IsBackground = true, Name = "JlSpp.Dmx send loop" };
             _thread.Start();
         }
 
+        /// <summary>Stops the background sending (the port stays open).</summary>
         public void Stop()
         {
             _running = false;
@@ -151,7 +168,7 @@ namespace JlSpp.Dmx
             _thread = null;
         }
 
-        /// <summary>Arret, handshake de deconnexion, fermeture.</summary>
+        /// <summary>Stops sending, sends the disconnect handshake and closes the port.</summary>
         public void Close()
         {
             Stop();
@@ -163,17 +180,38 @@ namespace JlSpp.Dmx
             }
             try
             {
-                var bye = DmxFrame.HandshakeDisconnect();
-                port.Write(bye, 0, bye.Length);
+                Write(port, DmxFrame.HandshakeDisconnect());
             }
             catch (Exception)
             {
-                // le boitier a peut-etre deja coupe la liaison
+                // the interface may already have dropped the link
             }
             port.Dispose();
         }
 
-        private void Loop()
+        /// <summary>Same as <see cref="Close"/>.</summary>
+        public void Dispose() => Close();
+
+        // ------------------------------------------------------------------ internals
+
+        private static void CheckChannel(int channel)
+        {
+            if (channel < 1 || channel > DmxFrame.UniverseSize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), "A DMX channel goes from 1 to 512.");
+            }
+        }
+
+        private static void Write(SerialPort port, byte[] data) => port.Write(data, 0, data.Length);
+
+        /// <summary>Counter written in each frame (any value works, the original app increments it).</summary>
+        private byte NextCodeNum()
+        {
+            _codeNum = unchecked((byte)(_codeNum + 1));
+            return _codeNum;
+        }
+
+        private void SendLoop()
         {
             var clock = Stopwatch.StartNew();
             while (_running)
@@ -189,10 +227,9 @@ namespace JlSpp.Dmx
                     ConnectionLost?.Invoke(this, ex);
                     return;
                 }
-                Thread.Sleep((int)Math.Max(1, _intervalMs - (clock.ElapsedMilliseconds - started)));
+                long elapsed = clock.ElapsedMilliseconds - started;
+                Thread.Sleep((int)Math.Max(1, _intervalMs - elapsed));
             }
         }
-
-        public void Dispose() => Close();
     }
 }
