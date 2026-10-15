@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/examples/">
+    <Project Path="examples/JlSpp.Dmx.Blink/JlSpp.Dmx.Blink.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/JlSpp.Dmx/JlSpp.Dmx.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JlSpp.Dmx.Tests/JlSpp.Dmx.Tests.csproj" />
+  </Folder>
+</Solution>

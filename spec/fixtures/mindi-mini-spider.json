@@ -1,0 +1,25 @@
+{
+ "_comment": "Messagerie DMX du Mindi Mini Spider 8x3W RGBW, mode 15 canaux. Voir docs/fixtures/mindi-mini-spider.md. verified = constate sur l'appareil ou lu sur la notice ; false = suppose.",
+ "manufacturer": "Mindi",
+ "model": "Mini Spider 8x3W RGBW",
+ "mode": "15 canaux",
+ "address_quirk_offset": 1,
+ "address_quirk_note": "Regle sur l'adresse N, l'appareil ignore le canal N et lit ses canaux a partir de N+1 (constate). Empreinte reelle : 16 canaux.",
+ "channels": [
+  {"channel": 1, "name": "Moteur 1", "type": "motor", "range": "0..255 = 0..135 degres", "default": 0, "verified": true},
+  {"channel": 2, "name": "Moteur 2", "type": "motor", "range": "0..255 = 0..135 degres", "default": 0, "verified": true},
+  {"channel": 3, "name": "Dimmer general", "type": "dimmer", "default": 0, "verified": true},
+  {"channel": 4, "name": "Strobe", "type": "strobe", "range": "0 = pas de strobe, puis vitesse", "default": 0, "verified": true},
+  {"channel": 5, "name": "LED 1", "type": "intensity", "color": "red", "wing": "left", "default": 0, "verified": false},
+  {"channel": 6, "name": "LED 2", "type": "intensity", "color": "green", "wing": "left", "default": 0, "verified": false},
+  {"channel": 7, "name": "LED 3", "type": "intensity", "color": "blue", "wing": "left", "default": 0, "verified": false},
+  {"channel": 8, "name": "LED 4", "type": "intensity", "color": "white", "wing": "left", "default": 0, "verified": false},
+  {"channel": 9, "name": "LED 5", "type": "intensity", "color": "red", "wing": "right", "default": 0, "verified": false},
+  {"channel": 10, "name": "LED 6", "type": "intensity", "color": "green", "wing": "right", "default": 0, "verified": false},
+  {"channel": 11, "name": "LED 7", "type": "intensity", "color": "blue", "wing": "right", "default": 0, "verified": false},
+  {"channel": 12, "name": "LED 8", "type": "intensity", "color": "white", "wing": "right", "default": 0, "verified": false},
+  {"channel": 13, "name": "Macros d'effets", "type": "macro", "default": 0, "verified": true},
+  {"channel": 14, "name": "Vitesse des effets", "type": "effect_speed", "default": 0, "verified": true},
+  {"channel": 15, "name": "Reset", "type": "control", "range": "laisser a 0", "default": 0, "verified": true}
+ ]
+}

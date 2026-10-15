@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Protocole DMX JL_SPP (boitiers Bluetooth "USB-RDM-DMX", appli RY-AI).
+    netstandard2.0 : utilisable depuis .NET 6/8/10, .NET Framework 4.6.1+, MAUI (Android), Unity.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>JlSpp.Dmx</RootNamespace>
+    <PackageId>JlSpp.Dmx</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Protocole DMX des boîtiers Bluetooth « USB-RDM-DMX » (Jieli JL_SPP, appli RY-AI).</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Pas d'avertissement pour chaque constante sans commentaire XML. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.13" />
+  </ItemGroup>
+
+</Project>

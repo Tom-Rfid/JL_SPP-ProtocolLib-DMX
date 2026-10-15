@@ -1,0 +1,27 @@
+# C / CMake
+c/build/
+*.obj
+*.exe
+*.pdb
+*.ilk
+
+# .NET
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+dist/
+
+# Android / Gradle
+.gradle/
+android/**/build/
+local.properties
+.idea/
+*.iml
