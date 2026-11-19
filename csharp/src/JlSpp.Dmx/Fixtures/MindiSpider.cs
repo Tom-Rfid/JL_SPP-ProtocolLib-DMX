@@ -14,7 +14,7 @@ namespace JlSpp.Dmx.Fixtures
         Dimmer = 3,
         /// <summary>0 = no strobe, then flash speed.</summary>
         Strobe = 4,
-        /// <summary>LED 1 (channels 5..12 = LED 1..8, color ASSUMED: red, green, blue, white, twice).</summary>
+        /// <summary>LED 1 (channels 5..12 = LED 1..8, color: red, green, blue, white, twice (confirmed)).</summary>
         Led1 = 5,
         /// <summary>Built-in effect programs.</summary>
         Macro = 13,
@@ -27,13 +27,14 @@ namespace JlSpp.Dmx.Fixtures
     /// <summary>
     /// DMX messages of the Mini Spider (see docs/fixtures/mindi-mini-spider.md).
     /// <para>
-    /// ADDRESS QUIRK (observed on the fixture): when set to address N, the Spider ignores
-    /// channel N and listens from N+1. With <c>addressQuirk = true</c> (default), give the
-    /// address SHOWN on the fixture display.
+    /// ADDRESSING: set to address N, the Spider reads its 15 channels from N (validated with
+    /// several fixtures chained). Give the address SHOWN on the fixture display.
+    /// <c>addressQuirk: true</c> adds the one-channel shift seen during the very first tests
+    /// (fixture listening from N+1), for a unit that does that.
     /// </para>
     /// <code>
     /// var universe = new byte[512];
-    /// var spider = new MindiSpider(address: 1);
+    /// var spider = new MindiSpider(address: 29);
     /// spider.SetDimmer(universe, 255);
     /// spider.SetWings(universe, 200, mirror: true);
     /// </code>
@@ -49,15 +50,15 @@ namespace JlSpp.Dmx.Fixtures
         /// <summary>Wing angle for motor value 255.</summary>
         public const double MotorMaxDegrees = 135.0;
 
-        /// <summary>LEDs of the left wing (ASSUMED, to be checked on the fixture).</summary>
+        /// <summary>LEDs of the left wing (confirmed on the fixture).</summary>
         public static readonly IReadOnlyList<int> LeftWingLeds = new[] { 1, 2, 3, 4 };
 
-        /// <summary>LEDs of the right wing (ASSUMED, to be checked on the fixture).</summary>
+        /// <summary>LEDs of the right wing (confirmed on the fixture).</summary>
         public static readonly IReadOnlyList<int> RightWingLeds = new[] { 5, 6, 7, 8 };
 
         /// <param name="address">DMX address shown on the fixture.</param>
-        /// <param name="addressQuirk">True (default) if the fixture ignores its first channel, as observed on our unit.</param>
-        public MindiSpider(int address, bool addressQuirk = true)
+        /// <param name="addressQuirk">True for a unit that ignores its first channel and listens from address + 1. False (default): normal addressing.</param>
+        public MindiSpider(int address, bool addressQuirk = false)
         {
             Address = address;
             AddressQuirk = addressQuirk;

@@ -40,7 +40,7 @@ Mindi Mini Spider (voir [../docs/fixtures/mindi-mini-spider.md](../docs/fixtures
 ```python
 from jlspp_dmx.fixtures import MindiSpider
 
-spider = MindiSpider(address=1)             # adresse affichée, décalage géré
+spider = MindiSpider(address=29)            # adresse affichée, canaux 29 à 43
 universe = bytearray(512)
 spider.set_dimmer(universe, 255)
 spider.set_wings(universe, 200, mirror=True)
@@ -64,7 +64,7 @@ link.set_universe(universe)
 
 ```bash
 python python/examples/blink.py COM6
-python python/examples/spider_wings.py COM6 1
+python python/examples/spider_wings.py COM6 29
 python python/examples/spot260x_show.py COM6 17
 ```
 

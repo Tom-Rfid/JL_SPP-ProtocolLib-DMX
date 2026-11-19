@@ -69,9 +69,14 @@ def test_cases():
          [rng.randrange(256) for _ in range(UNIVERSE_SIZE)], 255),
 
         ("mindi_spider_address1_code7",
-         "Mini Spider set to address 1 (it listens from channel 2): mirrored wings at 200, "
-         "dimmer 100 %, LED 1 and LED 5 at full.",
+         "Mini Spider at address 1 WITH the address_quirk option (listens from channel 2): "
+         "mirrored wings at 200, dimmer 100 %, LED 1 and LED 5 at full.",
          universe_from({2: 200, 3: 55, 4: 255, 6: 255, 10: 255}), 7),
+
+        ("mindi_spider_address29_code7",
+         "Mini Spider at address 29, normal addressing (channels 29-43): mirrored wings at 200, "
+         "dimmer 100 %, LED 1 and LED 5 at full.",
+         universe_from({29: 200, 30: 55, 31: 255, 33: 255, 37: 255}), 7),
 
         ("chauvet_spot260x_two_heads_code9",
          "Two Intimidator Spot 260X in 14-channel mode. Head at address 17: pan 0x8000, tilt 0x4000, "

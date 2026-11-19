@@ -1,120 +1,119 @@
-# Protocole DMX JL_SPP — spécification
+# JL_SPP DMX protocol — specification
 
-Boîtiers Bluetooth « USB-RDM-DMX » vendus avec l'appli Android **RY-AI** (paquet
-`com.example.rybt32`, version 1.3.3 étudiée). Puce Bluetooth Jieli, service série
-annoncé sous le nom **`JL_SPP`**.
+🇫🇷 [Version française](fr/protocol.md)
 
-Légende : ✅ vérifié sur le matériel · 🔍 lu dans le code décompilé de l'appli, non vérifié.
+Bluetooth "USB-RDM-DMX" boxes sold with the **RY-AI** Android app (package
+`com.example.rybt32`, version 1.3.3 studied). Jieli Bluetooth chip, serial service
+advertised as **`JL_SPP`**.
+
+Legend: ✅ verified on the hardware · 🔍 read in the decompiled app, not verified.
 
 ## 1. Transport ✅
 
-| Élément | Valeur |
+| Item | Value |
 |---|---|
-| Radio | Bluetooth **classique** (pas BLE) |
-| Profil | SPP (RFCOMM), UUID `00001101-0000-1000-8000-00805F9B34FB` |
-| Nom Bluetooth | `RY-…` (ex. `RY-A1096A-6319`) |
-| Débit série | sans objet (port virtuel) ; 9600 convient |
-| Rôle du pilote | **client** : il ouvre la liaison vers le boîtier |
+| Radio | **Classic** Bluetooth (not BLE) |
+| Profile | SPP (RFCOMM), UUID `00001101-0000-1000-8000-00805F9B34FB` |
+| Bluetooth name | `RY-…` (e.g. `RY-A1096A-6319`) |
+| Baud rate | not relevant (virtual port); 9600 is fine |
+| Role of the controller | **client**: it opens the link to the box |
 
-Sous Windows, l'appairage crée deux ports COM : utiliser le port **sortant**
-(voir [platforms.md](platforms.md)).
+On Windows, pairing creates two COM ports: use the **outgoing** one
+(see [platforms.md](platforms.md)).
 
-## 2. Séquence de dialogue ✅
+## 2. Dialogue sequence ✅
 
 ```
-ouverture du port / socket RFCOMM
-  → handshake de connexion          BB 99 77 01 77 99
-  → trame DMX (521 octets)          toutes les 100 ms, en continu
-  → trame DMX …
-  → handshake de déconnexion        BB 77 99 10 99 77 00 55
-fermeture
+open the port / RFCOMM socket
+  → connect handshake               BB 99 77 01 77 99
+  → DMX frame (521 bytes)           every 100 ms, continuously
+  → DMX frame …
+  → disconnect handshake            BB 77 99 10 99 77 00 55
+close
 ```
 
-Les handshakes sont envoyés **en clair**. Les trames DMX doivent être répétées en
-continu (l'appli envoie toutes les 100 ms, même si rien ne change) : c'est le
-rafraîchissement DMX habituel.
+Handshakes are sent **in clear**. DMX frames must be repeated continuously (the app
+sends one every 100 ms, even when nothing changes): it is the usual DMX refresh.
 
-## 3. Trame DMX « console » (521 octets) ✅
+## 3. "Console" DMX frame (521 bytes) ✅
 
-| Octet(s) | Contenu | En clair ? |
+| Byte(s) | Content | In clear? |
 |---|---|---|
-| 0 | `0x00` | oui |
-| 1–2 | `'K' 'T'` (`4B 54`) | oui |
-| 3 | scène : `0` = pilotage direct | oui |
-| 4 | vitesse : `0` en pilotage direct | oui |
-| 5–516 | **512 canaux DMX** : canal 1 → octet 5, canal *n* → octet 4 + *n* | **brouillés** |
-| 517 | clé 1 = `SIN[codeNum]` | oui |
-| 518 | clé 2 = `codeNum` | oui |
-| 519–520 | `'T' 'K'` (`54 4B`) | oui |
+| 0 | `0x00` | yes |
+| 1–2 | `'K' 'T'` (`4B 54`) | yes |
+| 3 | scene: `0` = direct control | yes |
+| 4 | speed: `0` in direct control | yes |
+| 5–516 | **512 DMX channels**: channel 1 → byte 5, channel *n* → byte 4 + *n* | **scrambled** |
+| 517 | key 1 = `SIN[codeNum]` | yes |
+| 518 | key 2 = `codeNum` | yes |
+| 519–520 | `'T' 'K'` (`54 4B`) | yes |
 
-- `codeNum` : compteur 0..255 incrémenté à chaque trame par l'appli. Il est écrit
-  dans la trame (octet 518) : le boîtier n'a pas besoin d'être synchronisé, toute
-  valeur fonctionne.
-- Brouillage des octets 5..516 : voir [cipher.md](cipher.md).
+- `codeNum`: 0..255 counter, incremented by the app on every frame. It is written in
+  the frame (byte 518): the box does not need to be in sync, any value works.
+- Scrambling of bytes 5..516: see [cipher.md](cipher.md).
 
-### Lecture de scènes mémorisées 🔍
+### Playing stored scenes 🔍
 
-Pendant la lecture d'une séquence (scènes 1..8), l'appli met l'octet 3 = numéro de
-scène et l'octet 4 = vitesse, calculée par :
+While a sequence (scenes 1..8) is playing, the app sets byte 3 = scene number and
+byte 4 = speed, computed by:
 
 ```
-Sin_Speed(i) = 0                                                        si i = 0
-             = 103 - (int(((sin(i * 0.35294117647058826 * π / 180) + 1) * 0.5) * 200) - 99)  sinon
+Sin_Speed(i) = 0                                                        if i = 0
+             = 103 - (int(((sin(i * 0.35294117647058826 * π / 180) + 1) * 0.5) * 200) - 99)  otherwise
 ```
 
-### Blackout de l'appli 🔍
+### App blackout 🔍
 
-L'appli envoie une trame dont tous les canaux valent 0 (même structure).
+The app sends a frame with every channel at 0 (same structure).
 
-## 4. Trame « download » vers la mémoire du boîtier (522 octets) 🔍
+## 4. "Download" frame to the box memory (522 bytes) 🔍
 
-Fonction `SendDownData()` : enregistre une séquence de pas dans une scène du boîtier
-(fonctionnement autonome sans téléphone). Une trame par pas, toutes les 300 ms.
+`SendDownData()` function: stores a sequence of steps in a scene of the box
+(stand-alone mode, without the phone). One frame per step, every 300 ms.
 
-| Octet(s) | Contenu |
+| Byte(s) | Content |
 |---|---|
 | 0 | `0xBB` |
 | 1–2 | `'D' 'U'` (`44 55`) |
-| 3 | numéro de scène (1..8) |
-| 4 | nombre de pas de la séquence |
-| 5 | numéro du pas (1..n) |
-| 6–517 | canaux 1..512 **brouillés** (seuls 1..96 sont remplis par l'appli) |
-| 518–519 | clé (`SIN[codeNum]`, `codeNum`) |
+| 3 | scene number (1..8) |
+| 4 | number of steps in the sequence |
+| 5 | step number (1..n) |
+| 6–517 | channels 1..512 **scrambled** (the app only fills 1..96) |
+| 518–519 | key (`SIN[codeNum]`, `codeNum`) |
 | 520–521 | `'U' 'D'` |
 
-## 5. Commandes RDM 🔍 (partiel)
+## 5. RDM commands 🔍 (partial)
 
-L'onglet RDM de l'appli construit un tableau `RDMHeadData` dont on connaît :
+The RDM tab of the app builds an `RDMHeadData` array, of which we know:
 
-| Octet | Rôle |
+| Byte | Role |
 |---|---|
-| 4 | commande : `0` identify off, `1` identify on, `2` changer l'adresse DMX, `3` changer le mode (personality) |
-| 5–10 | UID RDM de l'appareil (6 octets) |
-| 11–12 | paramètres : adresse (poids fort, poids faible) pour `2` ; numéro de mode (1..n) puis `0` pour `3` |
+| 4 | command: `0` identify off, `1` identify on, `2` change the DMX address, `3` change the mode (personality) |
+| 5–10 | RDM UID of the fixture (6 bytes) |
+| 11–12 | parameters: address (high byte, low byte) for `2`; mode number (1..n) then `0` for `3` |
 
-Les octets 0–3 et la longueur totale ne sont pas connus (classe `RDMFragment` non
-étudiée).
+Bytes 0–3 and the total length are unknown (the `RDMFragment` class was not studied).
 
-## 6. Trames reçues du boîtier 🔍
+## 6. Frames received from the box 🔍
 
-Décodées par `util.transaleBTData()` :
+Decoded by `util.transaleBTData()`:
 
-| Début | Taille | Contenu |
+| Starts with | Size | Content |
 |---|---|---|
-| `44 55` (« DU ») | blocs de 103 octets | contenu d'une scène mémorisée : octet 2 = n° de scène ; octets 4..102 = 99 octets dont 96 canaux brouillés (déchiffrement avec la clé en fin de bloc : `Decode(bloc, 1, 96, 97)` sur les 99 octets) |
-| `00 CC` | enregistrements de 46 octets | réponse à une recherche RDM : UID = octets 10..15, nombre de canaux = 35..36, mode courant = 37, nombre de modes = 38, adresse DMX = 39..40 (gros-boutiste), somme de contrôle = somme des octets 0..43 (poids fort en 44, poids faible en 45) |
-| `0F 0F 0F nn … F0 F0 F0` | 12 octets | fin de recherche RDM : `nn` = nombre d'appareils trouvés |
+| `44 55` ("DU") | 103-byte blocks | content of a stored scene: byte 2 = scene number; bytes 4..102 = 99 bytes including 96 scrambled channels (decoded with the key at the end of the block: `Decode(block, 1, 96, 97)` on the 99 bytes) |
+| `00 CC` | 46-byte records | answer to an RDM discovery: UID = bytes 10..15, channel count = 35..36, current mode = 37, mode count = 38, DMX address = 39..40 (big-endian), checksum = sum of bytes 0..43 (high byte in 44, low byte in 45) |
+| `0F 0F 0F nn … F0 F0 F0` | 12 bytes | end of RDM discovery: `nn` = number of fixtures found |
 
-## 7. Variante BLE de l'appli
+## 7. BLE variant of the app
 
-L'appli contient aussi un code BLE (classe `BLE`) pour d'autres modèles. Il n'est
-**pas** utilisé par le boîtier étudié, qui fonctionne en SPP.
+The app also contains BLE code (`BLE` class) for other models. It is **not** used by
+the box studied here, which works over SPP.
 
-## 8. Implémentations
+## 8. Implementations
 
-| Langage | Dossier | Testée contre `spec/test_vectors.json` |
+| Language | Folder | Tested against `spec/test_vectors.json` |
 |---|---|---|
 | Python | [`python/`](../python) | ✅ |
 | C99 | [`c/`](../c) | ✅ (MSVC) |
 | C# (.NET Standard 2.0) | [`csharp/`](../csharp) | ✅ |
-| Java / Android | [`android/`](../android) | ⚠ écrite mais pas compilée |
+| Java / Android | [`android/`](../android) | ✅ (plain Java; Bluetooth link not tested on a phone) |

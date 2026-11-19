@@ -5,11 +5,21 @@
 
 #include "jlspp_fixture_util.h"
 
-int jlspp_spider_init(jlspp_spider *spider, int address)
+static int spider_init(jlspp_spider *spider, int address, int quirk_offset)
 {
     spider->address = address;
-    spider->quirk_offset = 1;
-    return jlspp_address_fits(address, JLSPP_SPIDER_CHANNEL_COUNT + 1) ? JLSPP_OK : JLSPP_ERROR;
+    spider->quirk_offset = quirk_offset;
+    return jlspp_address_fits(address, JLSPP_SPIDER_CHANNEL_COUNT + quirk_offset) ? JLSPP_OK : JLSPP_ERROR;
+}
+
+int jlspp_spider_init(jlspp_spider *spider, int address)
+{
+    return spider_init(spider, address, 0);
+}
+
+int jlspp_spider_init_quirk(jlspp_spider *spider, int address)
+{
+    return spider_init(spider, address, 1);
 }
 
 int jlspp_spider_dmx_channel(const jlspp_spider *spider, int spider_channel)

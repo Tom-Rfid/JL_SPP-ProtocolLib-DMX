@@ -1,152 +1,154 @@
-# Messagerie DMX — Chauvet DJ Intimidator Spot 260X
+# DMX messages — Chauvet DJ Intimidator Spot 260X
 
-Lyre spot LED 75 W : pan 540°, tilt 234°, roue de 9 couleurs, roue de 7 gobos
-rotatifs, prisme 3 facettes, focus motorisé.
+🇫🇷 [Version française](../fr/fixtures/chauvet-intimidator-spot-260x.md)
 
-Source : **Intimidator Spot 260X Quick Reference Guide Rev. 1** (Chauvet).
-Fichier lisible par programme : [`spec/fixtures/chauvet-intimidator-spot-260x.json`](../../spec/fixtures/chauvet-intimidator-spot-260x.json).
+75 W LED spot moving head: pan 540°, tilt 234°, 9-colour wheel, wheel of 7 rotating
+gobos, 3-facet prism, motorised focus.
 
-## Modes et adressage
+Source: **Intimidator Spot 260X Quick Reference Guide Rev. 1** (Chauvet).
+Machine-readable file: [`spec/fixtures/chauvet-intimidator-spot-260x.json`](../../spec/fixtures/chauvet-intimidator-spot-260x.json).
 
-Le mode se choisit dans le menu de l'appareil : **Run Mode → DMX → 14CH / 8CH**.
-L'adresse se règle dans **Address** (001–512). Pas de décalage d'adresse
-(contrairement au Mini Spider) : réglée sur N, la lyre lit ses canaux à partir de N.
+## Modes and addressing
 
-| Mode | Canaux | Adresse de départ max |
+The mode is picked in the fixture menu: **Run Mode → DMX → 14CH / 8CH**. The
+address is set in **Address** (001–512): set to N, the head reads its channels
+from N.
+
+| Mode | Channels | Highest start address |
 |---|---|---|
-| 14 canaux | tout, pan/tilt 16 bits, dimmer, reset, macros | 499 |
-| 8 canaux | pan, tilt, couleur, gobo, rotation, prisme, focus, obturateur | 505 |
+| 14 channels | everything, 16-bit pan/tilt, dimmer, reset, macros | 499 |
+| 8 channels | pan, tilt, colour, gobo, rotation, prism, focus, shutter | 505 |
 
-Exemple de patch avec le Mini Spider en adresse 1 (canaux 1–16) : lyre 1 en **17**
-(17–30), lyre 2 en **31** (31–44).
+Example patch: head 1 at **1** (1–14), head 2 at **15** (15–28), Mini Spider at
+**29** (29–43).
 
-## Canaux
+## Channels
 
-| Fonction | 14 can. | 8 can. | Valeurs |
+| Function | 14 ch. | 8 ch. | Values |
 |---|---|---|---|
 | Pan | 1 | 1 | 0–255 = 0–540° |
-| Pan fin | 2 | — | octet de poids faible du pan |
+| Pan fine | 2 | — | low byte of pan |
 | Tilt | 3 | 2 | 0–255 = 0–234° |
-| Tilt fin | 4 | — | octet de poids faible du tilt |
-| Vitesse pan/tilt | 5 | — | **0 = le plus rapide**, 255 = le plus lent |
-| Roue de couleurs | 6 | 3 | voir ci-dessous |
-| Roue de gobos | 7 | 4 | voir ci-dessous |
-| Rotation du gobo | 8 | 5 | voir ci-dessous |
-| Prisme | 9 | 6 | 0–15 sans prisme, 16–255 prisme 3 facettes |
+| Tilt fine | 4 | — | low byte of tilt |
+| Pan/tilt speed | 5 | — | **0 = fastest**, 255 = slowest |
+| Colour wheel | 6 | 3 | see below |
+| Gobo wheel | 7 | 4 | see below |
+| Gobo rotation | 8 | 5 | see below |
+| Prism | 9 | 6 | 0–15 no prism, 16–255 3-facet prism |
 | Focus | 10 | 7 | 0–255 |
 | Dimmer | 11 | — | 0–255 = 0–100 % |
-| Obturateur / strobe | 12 | 8 | voir ci-dessous |
-| Fonctions (blackout, resets) | 13 | — | voir ci-dessous |
-| Macros de mouvement | 14 | — | voir ci-dessous |
+| Shutter / strobe | 12 | 8 | see below |
+| Functions (blackout, resets) | 13 | — | see below |
+| Movement macros | 14 | — | see below |
 
-⚠ En mode 8 canaux il n'y a **pas de dimmer** : la lumière s'allume avec
-l'obturateur ouvert (canal 8 à 255).
+⚠ The 8-channel mode has **no dimmer**: light comes on with the shutter open
+(channel 8 at 255).
 
-### Roue de couleurs
+### Colour wheel
 
-| Valeurs | Couleur | Valeur envoyée par les libs |
+| Values | Colour | Value sent by the libraries |
 |---|---|---|
-| 0–6 | Blanc | 3 |
-| 7–13 | Rouge | 10 |
+| 0–6 | White | 3 |
+| 7–13 | Red | 10 |
 | 14–20 | Orange | 17 |
-| 21–27 | Jaune | 24 |
-| 28–34 | Vert | 31 |
-| 35–41 | Bleu | 38 |
-| 42–48 | CTO (blanc chaud) | 45 |
+| 21–27 | Yellow | 24 |
+| 28–34 | Green | 31 |
+| 35–41 | Blue | 38 |
+| 42–48 | CTO (warm white) | 45 |
 | 49–55 | Cyan | 52 |
 | 56–62 | Magenta | 59 |
-| 63–64 | Blanc | |
-| 65–189 | Position continue de la roue (entre deux couleurs) | |
-| 190–221 | Arc-en-ciel, **rapide → lent** | |
-| 222–223 | Arrêt | |
-| 224–255 | Arc-en-ciel inversé, lent → rapide | |
+| 63–64 | White | |
+| 65–189 | Continuous wheel position (between two colours) | |
+| 190–221 | Rainbow, **fast → slow** | |
+| 222–223 | Stop | |
+| 224–255 | Reverse rainbow, slow → fast | |
 
-Les libs envoient le **milieu** de chaque plage : c'est la valeur la plus sûre
-pour tomber franchement sur la couleur.
+The libraries send the **middle** of each range: the safest value to land squarely
+on the colour.
 
-### Roue de gobos
+### Gobo wheel
 
-| Valeurs | Effet |
+| Values | Effect |
 |---|---|
-| 0–7 | Ouvert (pas de gobo) |
-| 8–15, 16–23, … 56–63 | Gobo 1 à 7 (par pas de 8) |
-| 64–71 | Gobo 7 qui tremble, lent → rapide |
-| 72–79 … 112–119 | Gobo 6 … gobo 1 qui tremble (ordre inversé) |
-| 120–127 | Ouvert |
-| 128–189 | Rotation de la roue, lent → rapide |
-| 190–193 | Arrêt |
-| 194–255 | Rotation inverse de la roue, lent → rapide |
+| 0–7 | Open (no gobo) |
+| 8–15, 16–23, … 56–63 | Gobo 1 to 7 (steps of 8) |
+| 64–71 | Gobo 7 shaking, slow → fast |
+| 72–79 … 112–119 | Gobo 6 … gobo 1 shaking (reverse order) |
+| 120–127 | Open |
+| 128–189 | Wheel rotation, slow → fast |
+| 190–193 | Stop |
+| 194–255 | Reverse wheel rotation, slow → fast |
 
-### Rotation du gobo
+### Gobo rotation
 
-| Valeurs | Effet |
+| Values | Effect |
 |---|---|
-| 0–7 | Pas de rotation |
-| 8–119 | Sens horaire, lent → rapide |
-| 120–231 | Sens anti-horaire, lent → rapide |
-| 232–255 | Va-et-vient, lent → rapide |
+| 0–7 | No rotation |
+| 8–119 | Clockwise, slow → fast |
+| 120–231 | Counter-clockwise, slow → fast |
+| 232–255 | Back and forth, slow → fast |
 
-### Obturateur / strobe
+### Shutter / strobe
 
-| Valeurs | Effet |
+| Values | Effect |
 |---|---|
-| 0–3 | **Fermé** (pas de lumière) |
-| 4–7 | Ouvert |
-| 8–76 | Strobe, lent → rapide |
-| 77–145 | Strobe pulsé, lent → rapide |
-| 146–215 | Strobe aléatoire, lent → rapide |
-| 216–255 | Ouvert |
+| 0–3 | **Closed** (no light) |
+| 4–7 | Open |
+| 8–76 | Strobe, slow → fast |
+| 77–145 | Pulse strobe, slow → fast |
+| 146–215 | Random strobe, slow → fast |
+| 216–255 | Open |
 
-### Fonctions (canal 13, mode 14 canaux)
+### Functions (channel 13, 14-channel mode)
 
-| Valeurs | Effet |
+| Values | Effect |
 |---|---|
-| 0–7 | Rien |
-| 8–15 | Blackout pendant les mouvements pan/tilt |
-| 16–23 | Blackout pendant la rotation de la roue de couleurs |
-| 24–31 | Blackout pendant la rotation de la roue de gobos |
-| 32–39 | Blackout pan/tilt + couleurs |
+| 0–7 | Nothing |
+| 8–15 | Blackout during pan/tilt movement |
+| 16–23 | Blackout during colour wheel movement |
+| 24–31 | Blackout during gobo wheel movement |
+| 32–39 | Blackout pan/tilt + colours |
 | 40–47 | Blackout pan/tilt + gobos |
-| 48–55 | Blackout pan/tilt + couleurs + gobos |
-| 96–103 | Reset pan |
-| 104–111 | Reset tilt |
-| 112–119 | Reset roue de couleurs |
-| 120–127 | Reset roue de gobos |
-| 136–143 | Reset prisme |
-| 144–151 | Reset focus |
-| 152–159 | Reset complet |
-| autres | Rien |
+| 48–55 | Blackout pan/tilt + colours + gobos |
+| 96–103 | Pan reset |
+| 104–111 | Tilt reset |
+| 112–119 | Colour wheel reset |
+| 120–127 | Gobo wheel reset |
+| 136–143 | Prism reset |
+| 144–151 | Focus reset |
+| 152–159 | Full reset |
+| others | Nothing |
 
-Après un reset, remettre le canal à 0 au bout de quelques secondes.
+After a reset, set the channel back to 0 after a few seconds.
 
-### Macros de mouvement (canal 14, mode 14 canaux)
+### Movement macros (channel 14, 14-channel mode)
 
-| Valeurs | Effet |
+| Values | Effect |
 |---|---|
-| 0–7 | Pas de macro |
-| 8–23, 24–39, … 120–135 | Macro 1 à 8 (par pas de 16) |
-| 136–151, … 232–247 | Macro au son 1 à 7 |
-| 248–255 | Macro au son 8 |
+| 0–7 | No macro |
+| 8–23, 24–39, … 120–135 | Macro 1 to 8 (steps of 16) |
+| 136–151, … 232–247 | Sound macro 1 to 7 |
+| 248–255 | Sound macro 8 |
 
-## Recettes
+## Recipes
 
-| Effet | Réglage (mode 14 canaux) |
+| Effect | Setting (14-channel mode) |
 |---|---|
-| Allumer | dimmer 255 + obturateur 255 |
-| Éteindre sans perdre la position | obturateur 0 (ou dimmer 0) |
-| Tête au centre | pan 128/0, tilt 128/0 |
-| Mouvement fluide | pan/tilt en 16 bits (canaux fins) + vitesse 0 |
-| Couleur fixe | roue = valeur du milieu de la couleur |
+| Light on | dimmer 255 + shutter 255 |
+| Light off, keeping the position | shutter 0 (or dimmer 0) |
+| Head centred | pan 128/0, tilt 128/0 |
+| Smooth movement | 16-bit pan/tilt (fine channels) + speed 0 |
+| Fixed colour | wheel = middle value of the colour |
 
-## Avec les librairies
+## With the libraries
 
-Dans les libs, **toutes les vitesses vont de 0 = lent à 255 = rapide**, même quand la
-plage DMX est à l'envers (arc-en-ciel). Seule exception : la vitesse pan/tilt reste à
-la convention de l'appareil (0 = rapide).
+In the libraries, **every speed goes from 0 = slow to 255 = fast**, even when the DMX
+range is reversed (rainbow). Only exception: the pan/tilt speed keeps the fixture
+convention (0 = fast).
 
 ```python
 from jlspp_dmx.fixtures import ChauvetSpot260X, Spot260XColor, Spot260XGobo
-spot = ChauvetSpot260X(address=17)            # mode 14 canaux par défaut
+spot = ChauvetSpot260X(address=17)            # 14-channel mode by default
 universe = bytearray(512)
 spot.light_on(universe)
 spot.set_pan_degrees(universe, 270)
@@ -176,5 +178,5 @@ spot.lightOn(universe, 255);
 spot.setColor(universe, ChauvetSpot260X.Color.RED);
 ```
 
-Le vecteur de test `chauvet_spot260x_two_heads_code9` (deux lyres en 17 et 31) est
-reproduit par les aides de chaque langage.
+The `chauvet_spot260x_two_heads_code9` test vector (two heads at 17 and 31) is
+reproduced by the helpers of every language.

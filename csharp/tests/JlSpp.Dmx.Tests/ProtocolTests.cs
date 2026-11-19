@@ -78,13 +78,29 @@ public class MindiSpiderTests
     public void Helpers_reproduce_the_spider_vector()
     {
         var universe = new byte[DmxFrame.UniverseSize];
-        var spider = new MindiSpider(address: 1);
+        var spider = new MindiSpider(address: 29);
         spider.SetWings(universe, 200, mirror: true);
         spider.SetDimmer(universe, 255);
         spider.SetLed(universe, 1, 255);
         spider.SetLed(universe, 5, 255);
 
-        Assert.Equal(2, spider.DmxChannel(SpiderChannel.Motor1)); // channel 1 is ignored by the Spider
+        Assert.Equal(29, spider.DmxChannel(SpiderChannel.Motor1)); // normal addressing
+        Assert.Equal(15, spider.FootprintSize);
+        Assert.Equal(ProtocolTests.VectorUniverse("mindi_spider_address29_code7"), universe);
+    }
+
+    [Fact]
+    public void Address_quirk_option_reproduces_the_old_vector()
+    {
+        var universe = new byte[DmxFrame.UniverseSize];
+        var spider = new MindiSpider(address: 1, addressQuirk: true);
+        spider.SetWings(universe, 200, mirror: true);
+        spider.SetDimmer(universe, 255);
+        spider.SetLed(universe, 1, 255);
+        spider.SetLed(universe, 5, 255);
+
+        Assert.Equal(2, spider.DmxChannel(SpiderChannel.Motor1)); // channel 1 ignored with the option
+        Assert.Equal(16, spider.FootprintSize);
         Assert.Equal(ProtocolTests.VectorUniverse("mindi_spider_address1_code7"), universe);
     }
 }

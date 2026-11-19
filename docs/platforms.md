@@ -1,36 +1,38 @@
-# Se connecter au boîtier selon la plateforme
+# Connecting to the box on each platform
 
-Le boîtier est un périphérique Bluetooth **SPP** : une fois appairé, il se pilote
-comme un port série. Seule l'étape d'appairage dépend du système.
+🇫🇷 [Version française](fr/platforms.md)
+
+The box is a Bluetooth **SPP** device: once paired, it is driven like a serial port.
+Only the pairing step depends on the operating system.
 
 ## Windows ✅
 
-1. Paramètres → Bluetooth → ajouter l'appareil `RY-…`.
-2. Windows crée deux ports COM (Plus de paramètres Bluetooth → Ports COM) :
-   - **entrant** (ex. COM5) : ne pas utiliser ;
-   - **sortant** « `JL_SPP` » (ex. COM6) : **c'est celui-là**.
-3. Ouvrir ce port avec n'importe quelle librairie série (pyserial, `SerialPort`
-   .NET, `CreateFile` Win32…).
+1. Settings → Bluetooth → add the `RY-…` device.
+2. Windows creates two COM ports (More Bluetooth settings → COM Ports):
+   - **incoming** (e.g. COM5): do not use it;
+   - **outgoing** "`JL_SPP`" (e.g. COM6): **this is the one**.
+3. Open that port with any serial library (pyserial, .NET `SerialPort`, Win32
+   `CreateFile`…).
 
-L'ouverture peut prendre quelques secondes (établissement de la liaison radio) :
-dans une interface graphique, ouvrir le port hors du thread de l'interface.
+Opening can take a few seconds (the radio link is being set up): in a GUI, open the
+port outside the UI thread.
 
-## Linux 🔍 (non testé)
+## Linux 🔍 (not tested)
 
 ```bash
 bluetoothctl            # pair <MAC>, trust <MAC>
-sdptool browse <MAC>    # repérer le canal RFCOMM du service JL_SPP (souvent 1)
+sdptool browse <MAC>    # find the RFCOMM channel of the JL_SPP service (often 1)
 sudo rfcomm bind 0 <MAC> 1
-# le port est /dev/rfcomm0
+# the port is /dev/rfcomm0
 ```
 
-## macOS 🔍 (non testé)
+## macOS 🔍 (not tested)
 
-Après appairage, un port `/dev/tty.<nom>-…` apparaît normalement pour les
-appareils SPP. Selon la version de macOS, sa création peut ne pas être automatique.
+After pairing, a `/dev/tty.<name>-…` port normally shows up for SPP devices.
+Depending on the macOS version, it may not be created automatically.
 
-## Android ✅ (méthode de l'appli d'origine)
+## Android ✅ (method of the original app)
 
-Socket RFCOMM vers l'appareil appairé avec l'UUID SPP standard, voir
-[`android/`](../android) (`SppDmxLink`). Permission `BLUETOOTH_CONNECT` à
-l'exécution à partir d'Android 12.
+RFCOMM socket to the paired device with the standard SPP UUID, see
+[`android/`](../android) (`SppDmxLink`). The `BLUETOOTH_CONNECT` runtime permission
+is needed from Android 12 on.

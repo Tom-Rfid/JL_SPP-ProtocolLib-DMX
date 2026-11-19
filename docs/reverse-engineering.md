@@ -1,41 +1,43 @@
-# Comment le protocole a été retrouvé
+# How the protocol was recovered
 
-Rétro-ingénierie menée pour pouvoir piloter, depuis un PC, un boîtier que seule
-une appli Android savait commander (interopérabilité).
+🇫🇷 [Version française](fr/reverse-engineering.md)
 
-## Étapes
+Reverse engineering carried out to drive, from a PC, a box that only an Android app
+could control (interoperability).
 
-1. **Identification du transport.** Sous Windows, l'appairage du boîtier crée un
-   port COM nommé `JL_SPP` (puce Jieli). Le code de l'appli (`bt/BtClient.java`)
-   ouvre `createRfcommSocketToServiceRecord(00001101-…)` : c'est du **SPP classique**.
-2. **Décompilation de l'APK** RY-AI 1.3.3 avec jadx.
-3. **Séquence de connexion** (`bt/BtReceiver.java`) : dès la liaison établie, l'appli
-   appelle `ConsoleFragment.SendBTConnectData()` (handshake) puis lit les réponses
-   en boucle (`readBTData()` → `util.transaleBTData()`).
-4. **Trame DMX** (`ConsoleFragment.SendConsloeData()`) : buffer de 521 octets
-   encadré par `KT … TK`, envoyé toutes les 100 ms, avec un appel à
-   `code.Encryption1(trame, 5, 512, MainActivity.CodeNum(), 517)`.
-5. **Brouillage** (`Util/Code.java`) : tables recopiées, puis trois valeurs
-   reconstituées (artefact jadx, voir [cipher.md](cipher.md)) et validées
-   automatiquement (permutations, aller-retour).
-6. **Compteur** (`MainActivity.CodeNum()`) : 0..255 incrémenté à chaque trame.
-7. **Validation sur le matériel** : test de clignotement (tous les canaux patchés
-   alternent 0 / 255 chaque seconde) réussi sur 2 lyres et un Mini Spider.
+## Steps
 
-## Classes de l'appli utiles
+1. **Identifying the transport.** On Windows, pairing the box creates a COM port
+   named `JL_SPP` (Jieli chip). The app code (`bt/BtClient.java`) opens
+   `createRfcommSocketToServiceRecord(00001101-…)`: this is **classic SPP**.
+2. **Decompiling the APK** of RY-AI 1.3.3 with jadx.
+3. **Connection sequence** (`bt/BtReceiver.java`): as soon as the link is up, the app
+   calls `ConsoleFragment.SendBTConnectData()` (handshake) then reads the answers in
+   a loop (`readBTData()` → `util.transaleBTData()`).
+4. **DMX frame** (`ConsoleFragment.SendConsloeData()`): 521-byte buffer framed by
+   `KT … TK`, sent every 100 ms, with a call to
+   `code.Encryption1(frame, 5, 512, MainActivity.CodeNum(), 517)`.
+5. **Scrambling** (`Util/Code.java`): tables copied, then three values rebuilt (jadx
+   artefact, see [cipher.md](cipher.md)) and checked automatically (permutations,
+   round trip).
+6. **Counter** (`MainActivity.CodeNum()`): 0..255, incremented on every frame.
+7. **Validation on the hardware**: blink test (every patched channel alternates
+   0 / 255 every second) passed on 2 moving heads and a Mini Spider.
 
-| Classe | Contenu |
+## Useful classes of the app
+
+| Class | Content |
 |---|---|
-| `bt.BtClient` | connexion SPP |
-| `bt.BtReceiver` | séquence de connexion, lecture |
-| `ConsoleFragment` | handshakes, trame console, trame download |
-| `Util.Code` | brouillage |
-| `Util.util` | décodage des trames reçues, RDM |
-| `MainActivity.CodeNum()` | compteur |
-| `uiAdapter.MyDeviceAdapter` | commandes RDM (identify, adresse, mode) |
+| `bt.BtClient` | SPP connection |
+| `bt.BtReceiver` | connection sequence, reading |
+| `ConsoleFragment` | handshakes, console frame, download frame |
+| `Util.Code` | scrambling |
+| `Util.util` | decoding of received frames, RDM |
+| `MainActivity.CodeNum()` | counter |
+| `uiAdapter.MyDeviceAdapter` | RDM commands (identify, address, mode) |
 
-## Ce qui reste à vérifier
+## Still to verify
 
-- Trame download vers la mémoire du boîtier (scènes autonomes).
-- Commandes RDM (en-tête et longueur) et réponses de recherche RDM.
-- Cadence d'envoi plus rapide que 100 ms (mouvements plus fluides ?).
+- Download frame to the box memory (stand-alone scenes).
+- RDM commands (header and length) and RDM discovery answers.
+- A send rate faster than 100 ms (smoother movements?).

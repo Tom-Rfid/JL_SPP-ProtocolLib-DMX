@@ -10,7 +10,8 @@
     <Nullable>enable</Nullable>
     <RootNamespace>JlSpp.Dmx</RootNamespace>
     <PackageId>JlSpp.Dmx</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>DMX protocol of the "USB-RDM-DMX" Bluetooth interfaces (Jieli JL_SPP, RY-AI app), with Mindi Mini Spider and Chauvet Intimidator Spot 260X helpers.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- No warning for each self-explanatory enum member without an XML comment. -->

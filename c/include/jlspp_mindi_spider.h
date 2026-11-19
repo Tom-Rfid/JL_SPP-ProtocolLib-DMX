@@ -2,12 +2,13 @@
  * jlspp_mindi_spider.h - DMX messages of the Mindi Mini Spider 8x3W RGBW (15-channel mode).
  * See docs/fixtures/mindi-mini-spider.md.
  *
- * ADDRESS QUIRK (observed on the fixture): when set to address N, the Spider ignores
- * channel N and listens from N+1. jlspp_spider_init() applies that shift: give it the
- * address SHOWN on the fixture. Set quirk_offset to 0 for a unit that behaves normally.
+ * ADDRESSING: set to address N, the Spider reads its 15 channels from N (validated with
+ * several fixtures chained). Give jlspp_spider_init() the address SHOWN on the fixture.
+ * jlspp_spider_init_quirk() adds the one-channel shift seen during the very first tests
+ * (fixture listening from N+1), for a unit that does that.
  *
  *     jlspp_spider spider;
- *     jlspp_spider_init(&spider, 1);
+ *     jlspp_spider_init(&spider, 29);
  *     jlspp_spider_set_dimmer(&spider, universe, 255);
  *     jlspp_spider_set_wings(&spider, universe, 200, 1);
  */
@@ -31,7 +32,7 @@ typedef enum {
     JLSPP_SPIDER_MOTOR_2 = 2,       /* wing 2 position */
     JLSPP_SPIDER_DIMMER = 3,        /* master dimmer */
     JLSPP_SPIDER_STROBE = 4,        /* 0 = no strobe, then flash speed */
-    JLSPP_SPIDER_LED_1 = 5,         /* LED 1..8 = channels 5..12 (color ASSUMED: R, G, B, W twice) */
+    JLSPP_SPIDER_LED_1 = 5,         /* LED 1..8 = channels 5..12 (color: R, G, B, W twice (confirmed)) */
     JLSPP_SPIDER_MACRO = 13,        /* built-in effect programs */
     JLSPP_SPIDER_EFFECT_SPEED = 14, /* effect speed, slow -> fast */
     JLSPP_SPIDER_RESET = 15         /* keep at 0 */
@@ -40,11 +41,14 @@ typedef enum {
 /* One Spider in the universe. */
 typedef struct {
     int address;      /* address shown on the fixture */
-    int quirk_offset; /* 1 = ignores its first channel (observed on our unit), 0 = normal */
+    int quirk_offset; /* 0 = normal (default), 1 = ignores its first channel */
 } jlspp_spider;
 
-/* Fills `spider` (quirk_offset = 1). JLSPP_ERROR if the 16 channels do not fit. */
+/* Fills `spider` with normal addressing (quirk_offset = 0). JLSPP_ERROR if the 15 channels do not fit. */
 int jlspp_spider_init(jlspp_spider *spider, int address);
+
+/* Same with the one-channel shift (quirk_offset = 1). JLSPP_ERROR if the 16 channels do not fit. */
+int jlspp_spider_init_quirk(jlspp_spider *spider, int address);
 
 /* Absolute DMX channel (1..512) of a Spider channel. */
 int jlspp_spider_dmx_channel(const jlspp_spider *spider, int spider_channel);
