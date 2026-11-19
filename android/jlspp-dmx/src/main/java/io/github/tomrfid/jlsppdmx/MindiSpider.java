@@ -4,13 +4,14 @@ package io.github.tomrfid.jlsppdmx;
  * DMX messages of the Mindi Mini Spider 8x3W RGBW (15-channel mode), see
  * docs/fixtures/mindi-mini-spider.md.
  *
- * <p>ADDRESS QUIRK (observed on the fixture): when set to address N, the Spider ignores
- * channel N and listens from N+1. With addressQuirk = true (default), give the address
- * SHOWN on the fixture display.
+ * <p>ADDRESSING: set to address N, the Spider reads its 15 channels from N (validated with
+ * several fixtures chained). Give the address SHOWN on the fixture display.
+ * addressQuirk = true adds the one-channel shift seen during the very first tests
+ * (fixture listening from N+1), for a unit that does that.
  *
  * <pre>
  * byte[] universe = new byte[512];
- * MindiSpider spider = new MindiSpider(1);
+ * MindiSpider spider = new MindiSpider(29);
  * spider.setDimmer(universe, 255);
  * spider.setWings(universe, 200, true);
  * </pre>
@@ -21,7 +22,7 @@ public final class MindiSpider {
     public static final int MOTOR_2 = 2;       // wing 2 position
     public static final int DIMMER = 3;        // master dimmer
     public static final int STROBE = 4;        // 0 = no strobe, then flash speed
-    public static final int LED_1 = 5;         // LED 1..8 = channels 5..12 (color ASSUMED: R, G, B, W twice)
+    public static final int LED_1 = 5;         // LED 1..8 = channels 5..12 (color: R, G, B, W twice (confirmed))
     public static final int MACRO = 13;        // built-in effect programs
     public static final int EFFECT_SPEED = 14; // effect speed, slow -> fast
     public static final int RESET = 15;        // keep at 0
@@ -29,21 +30,21 @@ public final class MindiSpider {
     public static final int CHANNEL_COUNT = 15;
     public static final int LED_COUNT = 8;
 
-    /** LEDs of each wing (ASSUMED, to be checked on the fixture). */
+    /** LEDs of each wing (confirmed on the fixture). */
     public static final int[] LEFT_WING_LEDS = {1, 2, 3, 4};
     public static final int[] RIGHT_WING_LEDS = {5, 6, 7, 8};
 
     private final int address;
     private final boolean addressQuirk;
 
-    /** Spider with the address quirk applied (as observed on our unit). */
+    /** Spider with normal addressing: channels address .. address + 14. */
     public MindiSpider(int address) {
-        this(address, true);
+        this(address, false);
     }
 
     /**
      * @param address      DMX address shown on the fixture
-     * @param addressQuirk true if the fixture ignores its first channel
+     * @param addressQuirk true for a unit that ignores its first channel and listens from address + 1
      */
     public MindiSpider(int address, boolean addressQuirk) {
         this.address = address;

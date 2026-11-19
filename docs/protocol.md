@@ -116,4 +116,4 @@ the box studied here, which works over SPP.
 | Python | [`python/`](../python) | ✅ |
 | C99 | [`c/`](../c) | ✅ (MSVC) |
 | C# (.NET Standard 2.0) | [`csharp/`](../csharp) | ✅ |
-| Java / Android | [`android/`](../android) | ⚠ written but not compiled yet |
+| Java / Android | [`android/`](../android) | ✅ (plain Java; Bluetooth link not tested on a phone) |

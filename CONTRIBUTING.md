@@ -109,6 +109,8 @@ cmake -S c -B c/build && cmake --build c/build && ctest --test-dir c/build
 - Say which fixture you tested with, its firmware or revision if known, and which
   channels are still ❓.
 - English or French, both are fine.
+- By opening a pull request you agree that your contribution is published under the
+  project's [MIT licence](LICENSE).
 
 ---
 
@@ -146,4 +148,6 @@ Android et les découvertes sur le RDM sont aussi les bienvenus.
 ### Pull requests
 
 Un appareil (ou un sujet) par pull request ; préciser l'appareil utilisé pour les
-essais et les canaux encore ❓. Français ou anglais, les deux conviennent.
+essais et les canaux encore ❓. Français ou anglais, les deux conviennent. En
+proposant une pull request, vous acceptez que votre contribution soit publiée sous la
+[licence MIT](LICENSE) du projet.

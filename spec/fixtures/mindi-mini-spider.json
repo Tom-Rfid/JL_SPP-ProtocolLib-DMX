@@ -3,8 +3,8 @@
  "manufacturer": "Mindi",
  "model": "Mini Spider 8x3W RGBW",
  "mode": "15ch",
- "address_quirk_offset": 1,
- "address_quirk_note": "Seen in early tests only: the fixture seemed to ignore channel N and read from N+1 (16-channel footprint). Gone once several fixtures were chained (validated October 2026): normal addressing, 15 channels from N. The libraries keep the shift as an option, on by default for compatibility.",
+ "address_quirk_offset": 0,
+ "address_quirk_note": "Seen in early tests only: the fixture seemed to ignore channel N and read from N+1 (16-channel footprint). Gone once several fixtures were chained (validated October 2026): normal addressing, 15 channels from N. Since 0.3.0 the libraries use normal addressing by default and keep the shift as an option.",
  "channels": [
   {"channel": 1, "function": "motor_1", "description": "Wing 1 position, 0..255 = 0..135 degrees", "default": 0, "verified": true},
   {"channel": 2, "function": "motor_2", "description": "Wing 2 position, 0..255 = 0..135 degrees", "default": 0, "verified": true},

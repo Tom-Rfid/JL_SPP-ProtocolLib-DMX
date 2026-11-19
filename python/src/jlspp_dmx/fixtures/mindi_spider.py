@@ -2,14 +2,15 @@
 DMX messages of the Mindi Mini Spider 8x3W RGBW (15-channel mode).
 See docs/fixtures/mindi-mini-spider.md.
 
-ADDRESS QUIRK (observed on the fixture): when set to address N, the Spider ignores
-channel N and listens from N+1. This class applies that shift by default
-(``address_quirk=True``): give it the address SHOWN on the fixture display.
+ADDRESSING: set to address N, the Spider reads its 15 channels from N (validated
+with several fixtures chained). Give the address SHOWN on the fixture display.
+``address_quirk=True`` adds the one-channel shift seen during the very first tests
+(fixture ignoring channel N and listening from N+1), for a unit that does that.
 
 Example::
 
     universe = bytearray(512)
-    spider = MindiSpider(address=1)
+    spider = MindiSpider(address=29)
     spider.set_dimmer(universe, 255)
     spider.set_wings(universe, 200, mirror=True)
     spider.set_led(universe, 1, 255)
@@ -28,7 +29,7 @@ class SpiderChannel(IntEnum):
     DIMMER = 3           # master dimmer
     STROBE = 4           # 0 = no strobe, then flash speed
     LED_1 = 5            # LED 1..8: intensity of each LED
-    LED_2 = 6            #   (color ASSUMED: red, green, blue, white, twice)
+    LED_2 = 6            #   (color: red, green, blue, white, twice (confirmed))
     LED_3 = 7
     LED_4 = 8
     LED_5 = 9
@@ -44,7 +45,7 @@ CHANNEL_COUNT = 15
 LED_COUNT = 8
 MOTOR_MAX_DEGREES = 135.0
 
-# ASSUMED split of the LEDs between the two wings (to be checked on the fixture).
+# Split of the LEDs between the two wings (confirmed on the fixture).
 LEFT_WING_LEDS = (1, 2, 3, 4)
 RIGHT_WING_LEDS = (5, 6, 7, 8)
 
@@ -63,11 +64,11 @@ class MindiSpider:
     """Computes the DMX channels of one Spider and writes them into a universe
     (512 values, index 0 = channel 1: a bytearray, a list...)."""
 
-    def __init__(self, address: int, address_quirk: bool = True):
+    def __init__(self, address: int, address_quirk: bool = False):
         """
         :param address: DMX address shown on the fixture.
-        :param address_quirk: True (default) if the fixture ignores its first channel,
-            as observed on our unit. Use False for a unit that behaves normally.
+        :param address_quirk: True for a unit that ignores its first channel and
+            listens from address + 1. False (default): normal addressing.
         """
         self.address = address
         self.address_quirk = address_quirk

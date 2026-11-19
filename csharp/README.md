@@ -33,7 +33,7 @@ Mindi Mini Spider :
 ```csharp
 using JlSpp.Dmx.Fixtures;
 
-var spider = new MindiSpider(address: 1);   // adresse affichée, décalage géré
+var spider = new MindiSpider(address: 29);  // adresse affichée, canaux 29 à 43
 spider.SetDimmer(universe, 255);
 spider.SetWings(universe, 200, mirror: true);
 ```

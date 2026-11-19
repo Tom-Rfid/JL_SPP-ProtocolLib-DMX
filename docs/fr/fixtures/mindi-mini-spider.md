@@ -18,10 +18,10 @@ suivant peut se placer au canal 44.
 > **Historique.** Lors des premiers essais, le Spider semblait ignorer le canal N
 > et lire ses canaux à partir de N + 1. Ce décalage a disparu une fois plusieurs
 > appareils chaînés sur la ligne DMX (validé en octobre 2026) : il venait très
-> probablement d'un test avec un seul appareil branché. Les librairies gardent une
-> option pour ce cas (`address_quirk` en Python, `addressQuirk` en C# et Java,
-> `quirk_offset` en C), **activée par défaut pour rester compatibles** avec les
-> versions précédentes : passez `False` / `false` / `0` pour un adressage normal.
+> probablement d'un test avec un seul appareil branché. Depuis la version 0.3.0, les
+> librairies utilisent l'adressage normal par défaut et gardent le décalage en option
+> pour un appareil qui le ferait vraiment : `address_quirk=True` en Python,
+> `addressQuirk: true` en C# et Java, `jlspp_spider_init_quirk()` en C.
 
 ## Canaux
 
@@ -56,15 +56,14 @@ Le dimmer général (canal Spider 3) doit être ouvert, sinon les LED restent
 | Aile gauche seule allumée | dimmer 255, LED 1-4 > 0, LED 5-8 = 0 |
 | Pas de strobe | strobe = 0 |
 
-Le vecteur de test `mindi_spider_address1_code7` a été écrit avec l'ancien
-décalage (Spider en adresse 1, canaux 2 à 16) : il reste valable pour vérifier
-l'option `address_quirk`.
+Vecteurs de test : `mindi_spider_address29_code7` (adresse 29, adressage normal) et
+`mindi_spider_address1_code7` (adresse 1 avec l'option de décalage, canaux 2 à 16).
 
 ## Avec les librairies
 
 ```python
 from jlspp_dmx.fixtures import MindiSpider, LEFT_WING_LEDS
-spider = MindiSpider(address=29, address_quirk=False)
+spider = MindiSpider(address=29)
 universe = bytearray(512)
 spider.set_dimmer(universe, 255)
 spider.set_wings(universe, 200, mirror=True)
@@ -72,7 +71,7 @@ spider.set_leds(universe, LEFT_WING_LEDS, 255)
 ```
 
 ```csharp
-var spider = new MindiSpider(address: 29, addressQuirk: false);
+var spider = new MindiSpider(address: 29);
 var universe = new byte[512];
 spider.SetDimmer(universe, 255);
 spider.SetWings(universe, 200, mirror: true);
@@ -82,13 +81,12 @@ spider.SetWings(universe, 200, mirror: true);
 uint8_t universe[512] = {0};
 jlspp_spider spider;
 jlspp_spider_init(&spider, 29);
-spider.quirk_offset = 0;            /* adressage normal */
 jlspp_spider_set_dimmer(&spider, universe, 255);
 jlspp_spider_set_wings(&spider, universe, 200, 1);
 ```
 
 ```java
-MindiSpider spider = new MindiSpider(29, false);
+MindiSpider spider = new MindiSpider(29);
 spider.setDimmer(universe, 255);
 spider.setWings(universe, 200, true);
 ```

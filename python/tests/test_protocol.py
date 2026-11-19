@@ -66,21 +66,32 @@ class TestFrames(unittest.TestCase):
 
 
 class TestMindiSpider(unittest.TestCase):
-    def test_address_quirk_shifts_by_one(self):
-        spider = MindiSpider(address=1)
+    def test_normal_addressing_by_default(self):
+        spider = MindiSpider(address=29)
+        self.assertEqual(spider.dmx_channel(SpiderChannel.MOTOR_1), 29)
+        self.assertEqual(spider.dmx_channel(SpiderChannel.RESET), 43)
+        self.assertEqual(list(spider.footprint), list(range(29, 44)))
+
+    def test_address_quirk_option_shifts_by_one(self):
+        spider = MindiSpider(address=1, address_quirk=True)
         self.assertEqual(spider.dmx_channel(SpiderChannel.MOTOR_1), 2)
         self.assertEqual(spider.dmx_channel(SpiderChannel.RESET), 16)
         self.assertEqual(list(spider.footprint), list(range(1, 17)))
-        self.assertEqual(MindiSpider(1, address_quirk=False).dmx_channel(SpiderChannel.MOTOR_1), 1)
 
-    def test_helpers_reproduce_the_spider_vector(self):
+    def _paint(self, spider):
         universe = bytearray(512)
-        spider = MindiSpider(address=1)
         spider.set_wings(universe, 200, mirror=True)
         spider.set_dimmer(universe, 255)
         spider.set_led(universe, 1, 255)
         spider.set_led(universe, 5, 255)
-        self.assertEqual(bytes(universe), vector_universe("mindi_spider_address1_code7"))
+        return bytes(universe)
+
+    def test_helpers_reproduce_the_spider_vector(self):
+        self.assertEqual(self._paint(MindiSpider(address=29)), vector_universe("mindi_spider_address29_code7"))
+
+    def test_quirk_option_reproduces_the_old_vector(self):
+        self.assertEqual(self._paint(MindiSpider(address=1, address_quirk=True)),
+                         vector_universe("mindi_spider_address1_code7"))
 
 
 class TestChauvetSpot260X(unittest.TestCase):

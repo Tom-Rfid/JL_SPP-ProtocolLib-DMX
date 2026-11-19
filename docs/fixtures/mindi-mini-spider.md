@@ -18,10 +18,10 @@ channel 44.
 > **History.** During the first tests, the Spider seemed to ignore channel N and
 > read its channels from N + 1. This shift went away once several fixtures were
 > daisy-chained on the DMX line (validated in October 2026): it most likely came from
-> a test with a single fixture plugged in. The libraries keep an option for that case
-> (`address_quirk` in Python, `addressQuirk` in C# and Java, `quirk_offset` in C),
-> **on by default to stay compatible** with the previous versions: pass
-> `False` / `false` / `0` for normal addressing.
+> a test with a single fixture plugged in. Since version 0.3.0 the libraries use
+> normal addressing by default and keep the shift as an option for a unit that would
+> really do it: `address_quirk=True` in Python, `addressQuirk: true` in C# and Java,
+> `jlspp_spider_init_quirk()` in C.
 
 ## Channels
 
@@ -56,15 +56,14 @@ whatever their values.
 | Left wing only | dimmer 255, LED 1-4 > 0, LED 5-8 = 0 |
 | No strobe | strobe = 0 |
 
-The `mindi_spider_address1_code7` test vector was written with the old shift (Spider
-at address 1, channels 2 to 16): it is still valid to check the `address_quirk`
-option.
+Test vectors: `mindi_spider_address29_code7` (address 29, normal addressing) and
+`mindi_spider_address1_code7` (address 1 with the shift option, channels 2 to 16).
 
 ## With the libraries
 
 ```python
 from jlspp_dmx.fixtures import MindiSpider, LEFT_WING_LEDS
-spider = MindiSpider(address=29, address_quirk=False)
+spider = MindiSpider(address=29)
 universe = bytearray(512)
 spider.set_dimmer(universe, 255)
 spider.set_wings(universe, 200, mirror=True)
@@ -72,7 +71,7 @@ spider.set_leds(universe, LEFT_WING_LEDS, 255)
 ```
 
 ```csharp
-var spider = new MindiSpider(address: 29, addressQuirk: false);
+var spider = new MindiSpider(address: 29);
 var universe = new byte[512];
 spider.SetDimmer(universe, 255);
 spider.SetWings(universe, 200, mirror: true);
@@ -82,13 +81,12 @@ spider.SetWings(universe, 200, mirror: true);
 uint8_t universe[512] = {0};
 jlspp_spider spider;
 jlspp_spider_init(&spider, 29);
-spider.quirk_offset = 0;            /* normal addressing */
 jlspp_spider_set_dimmer(&spider, universe, 255);
 jlspp_spider_set_wings(&spider, universe, 200, 1);
 ```
 
 ```java
-MindiSpider spider = new MindiSpider(29, false);
+MindiSpider spider = new MindiSpider(29);
 spider.setDimmer(universe, 255);
 spider.setWings(universe, 200, true);
 ```

@@ -1,7 +1,7 @@
 """
 Mini Spider: both wings swing in mirror, left/right LEDs fade in turn.
 
-    python examples/spider_wings.py COM6 1      (port, address shown on the Spider)
+    python examples/spider_wings.py COM6 29     (port, address shown on the Spider)
 """
 
 import math
@@ -14,7 +14,7 @@ from jlspp_dmx import DmxLink  # noqa: E402
 from jlspp_dmx.fixtures import LEFT_WING_LEDS, RIGHT_WING_LEDS, MindiSpider  # noqa: E402
 
 port = sys.argv[1] if len(sys.argv) > 1 else "COM6"
-spider = MindiSpider(address=int(sys.argv[2]) if len(sys.argv) > 2 else 1)
+spider = MindiSpider(address=int(sys.argv[2]) if len(sys.argv) > 2 else 29)
 universe = bytearray(512)
 
 with DmxLink(port) as link:

@@ -74,13 +74,26 @@ public class DmxFrameTest {
     @Test
     public void spiderHelpersReproduceTheSpiderVector() throws Exception {
         byte[] universe = new byte[DmxFrame.UNIVERSE_SIZE];
-        MindiSpider spider = new MindiSpider(1);
+        MindiSpider spider = new MindiSpider(29);
         spider.setWings(universe, 200, true);
         spider.setDimmer(universe, 255);
         spider.setLed(universe, 1, 255);
         spider.setLed(universe, 5, 255);
 
-        assertEquals(2, spider.dmxChannel(MindiSpider.MOTOR_1)); // channel 1 is ignored by the Spider
+        assertEquals(29, spider.dmxChannel(MindiSpider.MOTOR_1)); // normal addressing
+        assertArrayEquals(vectorUniverse("mindi_spider_address29_code7"), universe);
+    }
+
+    @Test
+    public void spiderQuirkOptionReproducesTheOldVector() throws Exception {
+        byte[] universe = new byte[DmxFrame.UNIVERSE_SIZE];
+        MindiSpider spider = new MindiSpider(1, true);
+        spider.setWings(universe, 200, true);
+        spider.setDimmer(universe, 255);
+        spider.setLed(universe, 1, 255);
+        spider.setLed(universe, 5, 255);
+
+        assertEquals(2, spider.dmxChannel(MindiSpider.MOTOR_1)); // channel 1 ignored with the option
         assertArrayEquals(vectorUniverse("mindi_spider_address1_code7"), universe);
     }
 

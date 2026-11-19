@@ -68,14 +68,26 @@ static void test_spider(void)
     uint8_t universe[JLSPP_UNIVERSE_SIZE] = {0};
     jlspp_spider spider;
 
-    check(jlspp_spider_init(&spider, 1) == JLSPP_OK, "spider", "init at address 1");
-    check(jlspp_spider_dmx_channel(&spider, JLSPP_SPIDER_MOTOR_1) == 2, "spider", "address quirk shifts by one");
+    check(jlspp_spider_init(&spider, 29) == JLSPP_OK, "spider", "init at address 29");
+    check(jlspp_spider_dmx_channel(&spider, JLSPP_SPIDER_MOTOR_1) == 29, "spider", "normal addressing");
+    check(jlspp_spider_init(&spider, 498) == JLSPP_OK, "spider", "15 channels fit at 498");
+    check(jlspp_spider_init(&spider, 499) == JLSPP_ERROR, "spider", "address 499 rejected");
 
+    jlspp_spider_init(&spider, 29);
     jlspp_spider_set_wings(&spider, universe, 200, 1);
     jlspp_spider_set_dimmer(&spider, universe, 255);
     jlspp_spider_set_led(&spider, universe, 1, 255);
     jlspp_spider_set_led(&spider, universe, 5, 255);
-    check(universe_equals_vector(universe, "mindi_spider_address1_code7"), "spider", "helpers == vector");
+    check(universe_equals_vector(universe, "mindi_spider_address29_code7"), "spider", "helpers == vector");
+
+    memset(universe, 0, sizeof universe);
+    check(jlspp_spider_init_quirk(&spider, 1) == JLSPP_OK, "spider", "init with quirk at address 1");
+    check(jlspp_spider_dmx_channel(&spider, JLSPP_SPIDER_MOTOR_1) == 2, "spider", "address quirk shifts by one");
+    jlspp_spider_set_wings(&spider, universe, 200, 1);
+    jlspp_spider_set_dimmer(&spider, universe, 255);
+    jlspp_spider_set_led(&spider, universe, 1, 255);
+    jlspp_spider_set_led(&spider, universe, 5, 255);
+    check(universe_equals_vector(universe, "mindi_spider_address1_code7"), "spider", "quirk option == old vector");
 
     check(jlspp_spider_set_led(&spider, universe, 9, 255) == JLSPP_ERROR, "spider", "LED 9 rejected");
 }

@@ -119,4 +119,4 @@ L'appli contient aussi un code BLE (classe `BLE`) pour d'autres modèles. Il n'e
 | Python | [`python/`](../../python) | ✅ |
 | C99 | [`c/`](../../c) | ✅ (MSVC) |
 | C# (.NET Standard 2.0) | [`csharp/`](../../csharp) | ✅ |
-| Java / Android | [`android/`](../../android) | ⚠ écrite mais pas compilée |
+| Java / Android | [`android/`](../../android) | ✅ (Java pur ; liaison Bluetooth pas testée sur téléphone) |

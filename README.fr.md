@@ -6,6 +6,7 @@
 
 ![Langages](https://img.shields.io/badge/librairies-Python%20%7C%20C99%20%7C%20C%23%20%7C%20Java-blue)
 ![Protocole](https://img.shields.io/badge/protocole-valid%C3%A9%20sur%20le%20mat%C3%A9riel-brightgreen)
+![Licence](https://img.shields.io/badge/licence-MIT-green)
 ![Contributions](https://img.shields.io/badge/modules%20d'appareils-contributions%20bienvenues-orange)
 
 Ces petits boîtiers (puce Jieli, service série `JL_SPP`, vendus avec l'appli Android
@@ -55,7 +56,7 @@ from jlspp_dmx.fixtures import ChauvetSpot260X, Spot260XColor, MindiSpider
 universe = bytearray(512)                         # index 0 = canal DMX 1
 
 lyre = ChauvetSpot260X(address=1)                 # mode 14 canaux, canaux 1 à 14
-spider = MindiSpider(address=29, address_quirk=False)
+spider = MindiSpider(address=29)                  # canaux 29 à 43
 
 lyre.light_on(universe)
 lyre.set_color(universe, Spot260XColor.BLUE)
@@ -135,9 +136,9 @@ Un module refuse une adresse qui déborderait de l'univers (`ValueError` en Pyth
 `ArgumentOutOfRangeException` en C#, `JLSPP_ERROR` en C).
 
 > Lors des tout premiers essais, le Mini Spider semblait sauter son premier canal ;
-> il s'adresse normalement une fois plusieurs appareils chaînés. Les librairies
-> gardent ce décalage en option (`address_quirk`), activée par défaut pour rester
-> compatibles : passez `False` pour un adressage normal. Détails dans
+> il s'adresse normalement une fois plusieurs appareils chaînés, et c'est le
+> comportement par défaut depuis la version 0.3.0. L'ancien décalage reste disponible
+> en option (`address_quirk=True`) pour un appareil qui le ferait vraiment. Détails dans
 > [docs/fr/fixtures/mindi-mini-spider.md](docs/fr/fixtures/mindi-mini-spider.md).
 
 ## Ajoutez votre appareil — les contributions sont bienvenues !
@@ -189,7 +190,7 @@ essais sous Linux / macOS et les découvertes sur le RDM sont aussi les bienvenu
 |---|---|
 | Trame DMX, brouillage, handshakes | ✅ validé sur le matériel |
 | Python, C, C# | ✅ testés sur les vecteurs de référence |
-| Android | ⚠ écrite d'après l'appli d'origine, **pas encore compilée ni testée** |
+| Android | ⚠ trames et modules d'appareils testés en Java pur ; liaison Bluetooth **pas encore testée sur téléphone** |
 | Scènes autonomes, RDM | 🔍 lu dans le code décompilé, à vérifier |
 
 ## Documentation
@@ -228,6 +229,12 @@ python tools/generate_tables.py   # tables Python, C, C#, Java + vecteurs C
 [**DmxCtrl**](https://github.com/Tom-Rfid/DmxCtrl) — console de lumière Windows
 (WinForms, .NET 10) construite sur ce protocole : onglet Soirée, balayages, un onglet
 par appareil, tempo au micro, exe portable en un seul fichier.
+
+## Licence
+
+[MIT](LICENSE) : utilisation, modification et redistribution libres, y compris dans
+des produits commerciaux, à condition de conserver la mention de copyright et le texte
+de la licence. Fourni sans aucune garantie.
 
 ## Avertissement
 

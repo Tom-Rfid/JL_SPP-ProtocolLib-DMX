@@ -6,6 +6,7 @@
 
 ![Languages](https://img.shields.io/badge/libraries-Python%20%7C%20C99%20%7C%20C%23%20%7C%20Java-blue)
 ![Protocol](https://img.shields.io/badge/protocol-validated%20on%20hardware-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Contributions](https://img.shields.io/badge/fixture%20modules-contributions%20welcome-orange)
 
 These little boxes (Jieli chip, `JL_SPP` serial service, sold with the **RY-AI**
@@ -53,7 +54,7 @@ from jlspp_dmx.fixtures import ChauvetSpot260X, Spot260XColor, MindiSpider
 universe = bytearray(512)                         # index 0 = DMX channel 1
 
 head = ChauvetSpot260X(address=1)                 # 14-channel mode, channels 1-14
-spider = MindiSpider(address=29, address_quirk=False)
+spider = MindiSpider(address=29)                  # channels 29-43
 
 head.light_on(universe)
 head.set_color(universe, Spot260XColor.BLUE)
@@ -133,9 +134,9 @@ A module refuses an address that would overflow the universe (`ValueError` in
 Python, `ArgumentOutOfRangeException` in C#, `JLSPP_ERROR` in C).
 
 > The Mini Spider seemed to skip its first channel during the very first tests; it
-> addresses normally once several fixtures are chained. The libraries keep that
-> shift as an option (`address_quirk`), on by default for compatibility — pass
-> `False` for normal addressing. Details in
+> addresses normally once several fixtures are chained, which is the default since
+> version 0.3.0. The old shift is still available as an option (`address_quirk=True`)
+> for a unit that would really do it. Details in
 > [docs/fixtures/mindi-mini-spider.md](docs/fixtures/mindi-mini-spider.md).
 
 ## Add your own fixture — contributions welcome!
@@ -184,7 +185,7 @@ and RDM findings are welcome too.
 |---|---|
 | DMX frame, scrambling, handshakes | ✅ validated on the hardware |
 | Python, C, C# | ✅ tested against the reference vectors |
-| Android | ⚠ written from the original app, **not compiled or tested yet** |
+| Android | ⚠ frames and fixture modules unit-tested in plain Java; Bluetooth link **not tested on a phone yet** |
 | Stand-alone scenes, RDM | 🔍 read in the decompiled code, to be checked |
 
 ## Documentation
@@ -223,6 +224,12 @@ python tools/generate_tables.py   # Python, C, C#, Java tables + C vectors
 [**DmxCtrl**](https://github.com/Tom-Rfid/DmxCtrl) — a Windows light console
 (WinForms, .NET 10) built on this protocol: party tab, sweeps, one tab per fixture,
 microphone tempo, portable single-file exe.
+
+## License
+
+[MIT](LICENSE): free to use, modify and redistribute, including in commercial
+products, as long as the copyright notice and the licence text are kept. Provided
+without any warranty.
 
 ## Disclaimer
 
