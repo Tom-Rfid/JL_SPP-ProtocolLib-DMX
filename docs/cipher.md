@@ -1,60 +1,61 @@
-# Brouillage des canaux DMX
+# Scrambling of the DMX channels
 
-Ce n'est **pas** de la cryptographie : une substitution par table (S-box), choisie
-selon un compteur. Il faut pourtant la reproduire exactement, sinon le boîtier
-ignore la trame. Source : classe `com.example.rybt32.Util.Code` de l'appli RY-AI.
+🇫🇷 [Version française](fr/cipher.md)
+
+This is **not** cryptography: it is a table substitution (S-box), chosen from a
+counter. It must still be reproduced exactly, otherwise the box ignores the frame.
+Source: class `com.example.rybt32.Util.Code` of the RY-AI app.
 
 ## Tables
 
-Fichier de référence : [`spec/cipher_tables.json`](../spec/cipher_tables.json).
+Reference file: [`spec/cipher_tables.json`](../spec/cipher_tables.json).
 
-| Table | Taille | Rôle |
+| Table | Size | Role |
 |---|---|---|
-| `password[5][256]` | 5 permutations de 0..255 | brouillage |
-| `decode[5][256]` | permutations inverses de `password` | débrouillage |
-| `sin[256]` | courbe sinusoïdale 0..255 | choix de la table + octet de clé |
+| `password[5][256]` | 5 permutations of 0..255 | scrambling |
+| `decode[5][256]` | inverse permutations of `password` | unscrambling |
+| `sin[256]` | sine curve 0..255 | table choice + key byte |
 
-## Brouillage (`Code.Encryption1`)
+## Scrambling (`Code.Encryption1`)
 
 ```
-entrées : trame, start, length, codeNum (0..255), marker
+inputs: frame, start, length, codeNum (0..255), marker
 table = password[ sin[codeNum] % 5 ]
-pour p de start à start + length - 1 :
-    trame[p] = table[ (trame[p] + codeNum) mod 256 ]
-trame[marker]     = sin[codeNum]
-trame[marker + 1] = codeNum
+for p from start to start + length - 1:
+    frame[p] = table[ (frame[p] + codeNum) mod 256 ]
+frame[marker]     = sin[codeNum]
+frame[marker + 1] = codeNum
 ```
 
-Pour une trame console : `start = 5`, `length = 512`, `marker = 517`.
+For a console frame: `start = 5`, `length = 512`, `marker = 517`.
 
-## Débrouillage (`Code.Decode`)
+## Unscrambling (`Code.Decode`)
 
 ```
-table = decode[ trame[marker] % 5 ]
-clé   = trame[marker + 1]
-pour chaque octet brouillé b : clair = (table[b] - clé) mod 256
+table = decode[ frame[marker] % 5 ]
+key   = frame[marker + 1]
+for each scrambled byte b: clear = (table[b] - key) mod 256
 ```
 
-## Constantes déformées par la décompilation
+## Constants mangled by the decompiler
 
-Dans le code décompilé par jadx, trois nombres de ces tables apparaissent sous la
-forme de constantes Android/Kotlin qui n'ont rien à voir avec le sujet. jadx a
-remplacé des littéraux par une constante visible ayant la même valeur :
+In the code decompiled by jadx, three numbers of these tables show up as Android /
+Kotlin constants that have nothing to do with the subject: jadx replaced literals by
+a visible constant that has the same value.
 
-| Dans le code décompilé | Valeur réelle |
+| In the decompiled code | Real value |
 |---|---|
 | `WorkQueueKt.MASK` | 127 |
 | `ItemTouchHelper.Callback.DEFAULT_DRAG_ANIMATION_DURATION` | 200 |
 | `ItemTouchHelper.Callback.DEFAULT_SWIPE_ANIMATION_DURATION` | 250 |
 
-Vérification : avec ces valeurs, chacune des 10 tables est une permutation complète
-de 0..255 (somme 32640, 256 valeurs distinctes), le chiffrement suivi du
-déchiffrement redonne les octets d'origine pour tout `codeNum`, et les trames
-produites sont acceptées par le boîtier.
+Check: with these values, each of the 10 tables is a complete permutation of 0..255
+(sum 32640, 256 distinct values), scrambling then unscrambling gives back the
+original bytes for every `codeNum`, and the frames produced are accepted by the box.
 
-## Régénérer les tables et vecteurs
+## Regenerating the tables and vectors
 
 ```bash
-python tools/generate_spec.py     # spec/*.json depuis tools/reference/cipher_reference.py
-python tools/generate_tables.py   # tables Python, C, C#, Java + vecteurs C
+python tools/generate_spec.py     # spec/*.json from tools/reference/cipher_reference.py
+python tools/generate_tables.py   # Python, C, C#, Java tables + C vectors
 ```
